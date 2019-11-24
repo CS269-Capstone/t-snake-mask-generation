@@ -7,32 +7,58 @@ import snake as snake
 import cv2
 
 
+class Point(object):
+    """
+    Represents a point on a grid with x and y components
+    """
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.edges = list()
+    # TODO@allen: 
+    # each point keeps track of edges and maintains set of all points
+    # associated with the edges that start or terminate on that point
+    # when adding a new edge between points, ensure that the pair of points doesn't
+    # already have that edge, if it does, assign the one that already exists
+
+    @property
+    def position(self):
+        return np.array([self.x, self.y]).reshape(1, 2)
+
+    def __lt__(self, other):
+        if self.x != other.x:
+            return self.x < other.x
+        else:
+            return self.y < other.y
+
+
 class GridCellEdge(object):
     """
     Represents one of the sides / cell-edges in the grid. 
     """
 
-    def __init__(self, coord1, coord2):
+    def __init__(self, point1, point2):
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
 
         Args:
         ==========================================
-        (2-tuple) coord1, coord2:
+        (2-tuple) point1, point2:
         * The (x, y) points that form this line segment.
         * The top-left corner of the image-rectangle should be (0, 0).
           (to be compatible with numpy indexing) (can change this if inconvenient)
         ==========================================
         """
-        self._coord1 = coord1  # todo maybe argchecks
-        self._coord2 = coord2
+        self._point1 = point1  # todo maybe argchecks
+        self._point2 = point2
 
         # TODO: implement this data structure
         self.intersections = dict()
 
     @property
     def endpoints(self):
-        return {self._coord1, self._coord2}
+        return {self._point1, self._point2}
 
     def find_intersection_point_with_element(self, element):
         """
@@ -44,7 +70,7 @@ class GridCellEdge(object):
         raise NotImplementedError
 
 
-class CellGrid(object):
+class Grid(object):
     """
     Class representing the entire cell grid (of triangles) for an image.
       - image meaning the blank space the T-snake is segmenting / infilling
@@ -76,24 +102,44 @@ class CellGrid(object):
         https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
         """
         assert isinstance(image, np.ndarray)
-        assert len(image.shape) == 3 # height * width * color channels
-        assert type(scale) == float
+        assert len(image.shape) == 3  # height * width * color channels
 
         # Raw image
         self.image = image
-        self.m, self.n , self.d = image.shape
+        self.m, self.n, self.d = image.shape
 
         # Image matrix after force and intensity function
         self.image_force = None
         self.image_intensity = None
 
         # Simplex Grid Vars
+
+        if scale >= 1:
+            s = "Scale > 1 must be an integer multiple of image size."
+            assert self.m % scale == 0, s
+            assert self.n % scale == 0, s
+        elif scale > 0:
+            inv = 1/float(scale)
+            assert inv.is_integer(), "If scale < 1, 1/scale must be an integer"
+        else:
+            assert False, "Scale must be > 0."
         self.scale = scale
-        self.grid = None  # TODO: Implement gen_simplex_grid
-        # Hash set containing [sorted((x1, y1), (x2,y2))]:edge, sort to resolve ambiguity
+        self.grid = None
+
+        # Hash set containing [Point(bottom left corner)]:all edges in pair of simplicies
         self.edges = dict()
         self.snakes = list()  # All the snakes on this grid
         # print("Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}".format(self.m, self.n, self.d))
+
+    def appendToMap(self, map, key, item):
+        """
+        utility function to append item to map[key] if key in map
+        """
+        #TODO@allen: cleanup this function and it's signature
+        if key in map:
+            map[key].append(item)
+        else:
+            map[key] = list(item)
 
     def gen_simplex_grid(self):
         """
@@ -105,18 +151,50 @@ class CellGrid(object):
 
         * vertex position indicated by its x and y indicies
         """
-        # for point in grid:
-        #     for neighbor points:
-        #         if sorted(point, neighbor) not in self.edges:
-        #             add it to self.edges
+        # NOTE: See todo in point class, this method is very much still under construction
+        if self.scale <= 1:
+            m_steps = int(self.m / self.scale)
+            n_steps = int(self.n / self.scale)
+            self.grid = np.zeros((m_steps, n_steps))
+            for i in range(m_steps):
+                for j in range(n_steps):
+                    p2 = Point(m_steps*self.scale, n_steps*self.scale)
+                    self.grid[i, j] = p2
+                    if j > 0:
+                        p1 = self.grid[i, j-1]
+                        edge = GridCellEdge(p1, p2)
+                        self.appendToMap(self.edges, p1, edge)
+                    if i > 0:
+                        p1 = self.grid[i-1, j]
+                        edge = GridCellEdge(p1, p2)
+                        self.appendToMap(self.edges, p1, edge)
+                    if i > 0 and j > 0:
+                        p1 = self.grid[i-1, j-1]
+                        p_lower_left = self.grid[i-1, j]
+                        p_upper_right = self.grid[i, j-1]
+                        self.appendToMap(self.edges, p1, GridCellEdge(p_lower_left, p2))
+                        self.appendToMap(self.edges, p1, GridCellEdge(p_upper_right, p2))
+                        self.appendToMap(self.edges, p1, GridCellEdge(p_lower_left, p_upper_right))
+
 
         raise NotImplementedError
 
     def get_image_force(self, threshold):
         """
-        generate force grid over simplex grid, will need to interpolate
+        Compute's force of self.image
+
+        Args:
+        ========================
+        (int) threshold:
+        * integer threshold, pixels with intensities above this value will be set to 1, else 0
+        ========================
+        Return:
+        ========================
+        (np.array) force: 
+        * (self.image.shape[0] by self.image.shape[1]) boolean array of 0 and 1
+        ========================
         """
-        if self.image_force is  None:
+        if self.image_force is None:
             intensity = self.get_image_intensity()
             self.image_force = np.zeros(intensity.shape) - 1
             self.image_force[intensity >= threshold] = 1
@@ -126,7 +204,7 @@ class CellGrid(object):
     def get_image_intensity(self):
         """
         Compute's intensity of self.image
-        
+
         Args:
         ========================
         None
@@ -167,12 +245,12 @@ class CellGrid(object):
 
 if __name__ == '__main__':
     # Import testing
-    snake = snake.Node(1,1) 
+    snake = snake.Node(1, 1)
     edge = GridCellEdge(1, 1)
 
     # Manual Testing import
     img = cv2.imread("plane.png")
-    grid = CellGrid(img)
+    grid = Grid(img, 1)
     grey = grid.get_image_intensity()
     force = grid.get_image_force(250)
     # print(grey, np.max(grey), grey.shape)
@@ -181,3 +259,9 @@ if __name__ == '__main__':
     cv2.imshow("grey_image", grey)
     cv2.imshow("force_image", force)
     key = cv2.waitKey(0)
+
+    pts = [[Point(1, 1), Point(1, 2)],
+           [Point(1, 3), Point(1, 4)]]
+
+    pts = np.array(pts)
+    print(pts)
