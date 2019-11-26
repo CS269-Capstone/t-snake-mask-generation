@@ -3,6 +3,14 @@
 # Capstone-Integration
 This repository will contain the functional t-snake implementation augmented with the inpainting GAN.
 
+## Installation
+Go to the folder containing all the code and type:
+```
+pip install -e .
+```
+where ```-e``` means install in editable (dev) mode.
+
+
 ## How to submit code:
 This information is referenced from the Editing in a temporary branch header [here](https://drive.google.com/open?id=19pY7Lvf4Qnqd8n2r_5DisdZURmBsU94rxcJ4A-VnEp8).
 

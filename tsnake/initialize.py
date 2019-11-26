@@ -3,6 +3,7 @@ Module for reading in image+mask, then initializing the T-snakes accordingly.
 
 NOTE: we might need to add some kind of padding to the mask-rectangles?
 """
+import os
 
 import cv2
 import numpy as np
@@ -28,7 +29,9 @@ def load_grayscale_image(path):
     Returns:
     2D np.array representing *grayscale* image.
     """
+    path = os.path.abspath(path)
     image = cv2.imread(path, 0)
+    assert image is not None, 'failed to load image at path=%s' % path
     
     # sanity checks
     assert image.max() <= 255
@@ -50,11 +53,13 @@ def load_mask(path):
     2D binary np.array representing the mask.
       - mask[i, j] == 1    --> means that pixel (i, j) is masked
     """
+    path = os.path.abspath(path)
     image = cv2.imread(path)
+    assert image is not None, 'failed to load mask at path=%s' % path
     
     # Some asserts to make sure the input image is as expected
     # Mask should be binary 0/255
-    assert set(np.unique(image)) == {0, 255}
+    assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
     # Mask should be 3D
     assert len(image.shape) == 3
     assert image.shape[2] == 3
