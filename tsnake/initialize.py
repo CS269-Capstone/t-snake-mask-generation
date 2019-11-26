@@ -1,12 +1,7 @@
 """
-Module for interfacing with the GAN code.
+Module for reading in image+mask, then initializing the T-snakes accordingly.
 
-TODO: we might need to add some kind of padding to the mask-rectangles
-
-API functions:
-=====================================================
-compute_masked_regions(raw_image, raw_mask) --> list of MaskedRegion instances
-=====================================================
+NOTE: we might need to add some kind of padding to the mask-rectangles?
 """
 
 import cv2
@@ -16,6 +11,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.spatial.distance import cdist
 
 from .snake import Node, TSnake
+
 
 # =====================================================
 # FOR LOADING IMAGE AND MASK FILES
@@ -301,7 +297,7 @@ class MaskedRegion(object):
         plt.show()
     
     def initialize_tsnake(
-        self, N, p, c, sigma, verbose=False
+        self, N, p, c, sigma, a, b, gamma, dt, verbose=False
     ):
         """
         Initializes a T-snake by placing the initial nodes along 
@@ -324,15 +320,35 @@ class MaskedRegion(object):
         (float) sigma:
         * The hyperparameter sigma from Equation (A.4).
         
+        (float) a:
+        * The hyperparameter a from Equations (1), (8).
+        
+        (float) b:
+        * The hyperparameter b from Equations (1), (8).
+        
+        (float) gamma:
+        * The hyperparameter gamma from Equations (1), (8).
+        
         (bool) verbose:
         * Set to True to print extra information.
         =====================================================
         """
+        # =============================================================
+        # Argument checks =============================================
+        # =============================================================
         assert N > 1, 'there must be at least 2 T-snake nodes (got N=%d).' % N
         assert p > 0, 'Hyperparameter p (Eq 7) must be > 0 (got p=%f).' % p
         assert c > 0, 'Hyperparameter c (Eq A.4) must be > 0 (got c=%f).' % c
+        assert a > 0, 'Hyperparameter a (Eqs 1,8) must be > 0 (got a=%f).' % a
+        assert b > 0, 'Hyperparameter b (Eqs 1,8) must be > 0 (got b=%f).' % b
+        assert dt > 0, 'Hyperparameter dt (Eq 8) must be > 0 (got dt=%f).' % dt
+        
         msg = 'Hyperparameter sigma (Eq A.4) must be > 0 (got sigma=%f).' % sigma
         assert sigma > 0, msg
+        msg = 'Hyperparameter gamma (Eqs 1,8) must be > 0 (got gamma=%f).' % gamma
+        assert gamma > 0, msg
+        # =============================================================
+        # =============================================================
         
         # pixels on the boundary between masked and unmasked
         edge_pixels = self._find_edge_pixels()
@@ -358,7 +374,9 @@ class MaskedRegion(object):
         force_grid = self.compute_force_grid(sigma, c)
         intensity_grid = self.raw_image_portion  # grayscale image
         
-        snake = TSnake(nodes, force_grid, intensity_grid)
+        snake = TSnake(
+            nodes, force_grid, intensity_grid, a, b, gamma, dt
+        )
         self._initial_tsnake = snake
         return snake
     
@@ -388,17 +406,35 @@ class MaskedRegion(object):
     
     def compute_force_grid(self, sigma, c):
         """
-        TODO: test this is correct
-        
         NOTE: can we manipulate the force grid to make sure the snake
               doesn't leave the user-masked area?
+        
+        Args:
+        ======================
+        (float) sigma: 
+        * The hyperparameter sigma from Equation (A.4).
+        
+        (float) c:
+        * The hyperparameter c from Equation (A.4).
+        ======================
+        Returns:
+        ======================
+        A np.array of shape (n, m, 2) containing the computed values of 
+        Equation (7) at each pixel in the image.
+        ======================
         """
         # Apply Gaussian smoothing
         out = gaussian_filter(self.raw_image_portion, sigma=sigma)
+        
         # Take the gradient
-        out = np.gradient(out)
-        # Take the magnitude
+        x_grad, y_grad = np.gradient(out)
+        out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
+        out[:, :, 0] = x_grad
+        out[:, :, 1] = y_grad
+        
+        # Take the magnitude (??)
         out = np.abs(out)
+        
         # Multiply by -c
         out = out * -c
         
