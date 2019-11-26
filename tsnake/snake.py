@@ -69,6 +69,8 @@ class TSnake(object):
     ===========================================
     
     TODO: hyperparameters in constructor
+    TODO: calculate intensity normal thingy
+    TODO: comments for a,b, gamma
     """
     
     def __init__(self, nodes, force, intensity, a, b, gamma, dt):
