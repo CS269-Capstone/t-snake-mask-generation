@@ -4,3 +4,6 @@ data
 .*
 __pycache__
 *.png
+*.ipynb_checkpoints/
+*__pycache__/
+*.egg-info/
