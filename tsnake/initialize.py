@@ -376,7 +376,7 @@ class MaskedRegion(object):
         if verbose:
             print('Total of %d T-snake nodes were initialized' % len(nodes))
         
-        force_grid = self.compute_force_grid(sigma, c)
+        force_grid = self.compute_force_grid(sigma, c, p)
         intensity_grid = self.raw_image_portion  # grayscale image
         
         snake = TSnake(
@@ -409,39 +409,46 @@ class MaskedRegion(object):
         
         return ordered_nodes
     
-    def compute_force_grid(self, sigma, c):
+    def compute_force_grid(self, sigma, c, p):
         """
         NOTE: can we manipulate the force grid to make sure the snake
               doesn't leave the user-masked area?
         
         Args:
-        ======================
+        ============================================
         (float) sigma: 
         * The hyperparameter sigma from Equation (A.4).
         
         (float) c:
         * The hyperparameter c from Equation (A.4).
-        ======================
+        
+        (float) p:
+        * The hyperparameter p from Equation (7).
+        ============================================
+        
         Returns:
-        ======================
+        ============================================
         A np.array of shape (n, m, 2) containing the computed values of 
         Equation (7) at each pixel in the image.
-        ======================
+        ============================================
         """
         # Apply Gaussian smoothing
-        out = gaussian_filter(self.raw_image_portion, sigma=sigma)
+        smoothed = gaussian_filter(self.raw_image_portion, sigma=sigma)
         
         # Take the gradient
-        x_grad, y_grad = np.gradient(out)
+        x_grad, y_grad = np.gradient(smoothed)
+        # Compute pixel-wise magnitudes
+        mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
+        # Multiply by -c
+        mags = mags * -c
+        
+        x_grad, y_grad = np.gradient(mags)
         out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
         out[:, :, 0] = x_grad
         out[:, :, 1] = y_grad
         
-        # Take the magnitude (??)
-        out = np.abs(out)
-        
-        # Multiply by -c
-        out = out * -c
+        # Scale the potential by p
+        out = p * out
         
         return out
     
