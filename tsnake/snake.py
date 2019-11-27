@@ -24,8 +24,7 @@ class Node(object):
     def update(self, x, y):
         self.x = x  # todo: arg check if we care
         self.y = y
-        
-# @allen: Not sure if we'll need this element, but leaving it for now        
+           
 class Element(object):
     """
     Class representing an element / edge between two nodes in the T-snake.
@@ -40,7 +39,11 @@ class Element(object):
         assert isinstance(node2, Node)
         self.node1 = node1
         self.node2 = node2
-        
+
+    @property
+    def nodes(self):
+        return np.array([self.node1, self.node2]) #.reshape(1,2)   
+    
     def intersects_grid_cell(self, grid_cell):
         # TODO: clean this up
         raise NotImplementedError
@@ -86,13 +89,17 @@ class TSnake(object):
         self.gamma = gamma
         self.dt = dt
         
-        self.elements = []
+        self._elements = []
         # Connect each node[i] --> node[i+1]
         for i in range(len(nodes)-1):
-            self.elements.append(Element(self.nodes[i], self.nodes[i+1]))
+            self._elements.append(Element(self.nodes[i], self.nodes[i+1]))
             
         # Connect node[N-1] --> node[0]
-        self.elements.append(Element(self.nodes[-1], self.nodes[0]))
+        self._elements.append(Element(self.nodes[-1], self.nodes[0]))
+
+    @property
+    def elements(self):
+        return np.array(self._elements)
     
     @property
     def num_nodes(self):
