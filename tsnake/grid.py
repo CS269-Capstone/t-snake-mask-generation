@@ -25,6 +25,13 @@ class Point(object):
     # already have that edge, if it does, assign the one that already exists
 
     def add_edge(self, edge):
+        '''
+        Add given edge to the dict of edges connected to this node
+        args:
+        * edge: GridCellEdge connected to this node
+        return:
+        * None: Stores edge in self.adjacent_edges dictionary
+        '''
         self.adjacent_edges[edge] = edge
 
     @property
@@ -35,7 +42,7 @@ class Point(object):
         return "({}, {})".format(self.x, self.y)
 
     def __repr__(self):
-        return self.__str__() + ":" + str(self.__hash__())
+        return self.__str__()  # + ":" + str(self.__hash__()) #NOTE: For debugging, can add hash
 
     def __hash__(self):
         return hash((self.x, self.y))
@@ -55,16 +62,18 @@ class GridCellEdge(object):
     Represents one of the sides / cell-edges in the grid. 
     """
 
-    def __init__(self, point1, point2):
+    def __init__(self, point1: Point, point2: Point) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
 
         Args:
         ==========================================
-        (2-tuple) point1, point2:
-        * The (x, y) points that form this line segment.
-        * The top-left corner of the image-rectangle should be (0, 0).
-          (to be compatible with numpy indexing) (can change this if inconvenient)
+        * point1: Point(), for first (origin) point of the line segment
+        * point2: Point(), the terminal point of the line segment
+        ==========================================
+        Return:
+        ==========================================
+        * None
         ==========================================
         """
         pts = sorted([point1, point2])
@@ -72,11 +81,11 @@ class GridCellEdge(object):
         self._point2 = pts[1]
 
         # TODO: implement this data structure
-        self.intersections = dict()
+        self.intersections = list()
 
     @property
     def endpoints(self):
-        return np.array([self._point1, self._point2]).reshape(1, 2)
+        return np.array([self._point1, self._point2])  # .reshape(1, 2)
 
     def __str__(self):
         return "<{}, {}>".format(str(self._point1), str(self._point2))
@@ -89,6 +98,20 @@ class GridCellEdge(object):
 
     def __eq__(self, other):
         return self._point1 == other._point1 and self._point2 == other._point2
+
+    def add_intersection(self, point: Point) -> None:
+        """
+        Store the intersection in the edge
+        Arguments:
+        -------------------------------
+        * point: Point(), point object representing where the intersection occured
+        -------------------------------
+        Return:
+        -------------------------------
+        * None
+        -------------------------------
+        """
+        self.intersections.append(point)
 
     def find_intersection_point_with_element(self, element):
         """
@@ -159,7 +182,7 @@ class Grid(object):
         # Hash map containing [Point(upper left corner)]:all edges in pair of simplicies
         self.point_edge_map = dict()
         self.edges = dict()  # set of all edges
-        self.snakes = list()  # All the snakes on this grid
+        self._snakes = list()  # All the snakes on this grid
         # print("Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}".format(self.m, self.n, self.d))
 
     def _store_edge(self, p1: Point, p2: Point) -> None:
@@ -214,12 +237,10 @@ class Grid(object):
                         p2 = self.grid[i-1, j+1]
                         self._store_edge(curr_pt, p2)  # diagnoal edge
 
-        # raise NotImplementedError
-
     def get_image_force(self, threshold):
         """
         Compute's force of self.image
-
+        TODO: Use cole's image force computation, this one is incorrect
         Args:
         ========================
         (int) threshold:
@@ -260,10 +281,10 @@ class Grid(object):
         """
         Add a new snake to the grid
         """
-        assert isinstance(new_snake, snake.Snake)
-        self.snakes.append(new_snake)
+        # assert isinstance(new_snake, snake.TSnake) # TODO: this line doesn't work
+        self._snakes.append(new_snake)
 
-    def get_closest_node(self, position):
+    def get_closest_node(self, position: np.array) -> np.array:
         """
         Get the closest grid point to the coordinates 
         of the snake node passed in position
@@ -275,8 +296,8 @@ class Grid(object):
         # Integer divide to closest node
         pos_frac = position - np.fix(position)
         pos_whole = position - pos_frac
-        rem = np.fmod(pos_frac, self.scale)
-        idx = np.array((pos-rem)/self.scale, dtype=int)
+        remainder = np.fmod(pos_frac, self.scale)
+        idx = np.array((position-remainder)/self.scale, dtype=int)
         return idx
 
     def get_cell_edges(self, index):
@@ -315,12 +336,12 @@ class Grid(object):
         """
         Return the distance between a and b
         args:
-        
+
         """
         return np.sqrt(np.sum(np.power(a-b, 2)))
 
     @classmethod
-    def seg_intersect(cls, a1, a2, b1, b2):
+    def seg_intersect(cls, a1, a2, b1, b2, decimal=3):
         """ 
         Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
         Args: all are expected as (1,2) numpy arrays
@@ -328,6 +349,7 @@ class Grid(object):
         * a2: [x, y] another point on the first line
         * b1: [x, y] a point on the second line
         * b2: [x, y] another point on the second line
+        * decimal: int (optional): Number of decimals to round to, default is 3
         return:
         * (1,2) np array denoting [x, y] coordinates of intersection
         """
@@ -336,48 +358,92 @@ class Grid(object):
         l1 = np.cross(h[0], h[1])           # get first line
         l2 = np.cross(h[2], h[3])           # get second line
         x, y, z = np.cross(l1, l2)          # point of intersection
+        result = None
         if z == 0:                          # lines are parallel
-            return np.array([float('inf'), float('inf')]).reshape(1, 2)
-        return np.array([x/z, y/z]).reshape(1, 2)
+            result = np.array([float('inf'), float('inf')]).reshape(1, 2)
+        else:
+            result = np.array([x/z, y/z]).reshape(1, 2)
+        return np.around(result, decimal)
 
     def _get_element_intersection(self, element: snake.Element, edge: GridCellEdge) -> Point:
         """
         Get intersection between snake element and grid-cell-edge
-        args:
+        \nargs:\n
         * element: snake element, edge: GridCellEdge
-        return:
+        \nreturn:\n
         * Point: intersection point, or None if no intersection
         """
-        s1, s2 = element.get_nodes(
-        )  # TODO: Add to snake, (1,2) np array of [dx, dy]
+        s1, s2 = element.nodes  # TODO: Add to snake, (1,2) np array of [dx, dy]
         e1, e2 = edge.endpoints
+
+        # Find intersection candidate
         intersection = self.seg_intersect(
             s1.position, s2.position, e1.position, e2.position)
-        if self.dist(intersection, e1) > self.scale:
-            return None
-        else:
-            return Point(intersection[0, 0], intersection[0, 1])
 
-    def compute_intersections(self, snake: snake.TSnake) -> [Point]:
+        # Check if the two lines are parallel
+        if intersection[0, 0] == float('inf'):
+            return None
+
+        # Check if it's too far from the snake element endpoints to be valid
+        ds1 = self.dist(intersection, s1.position)
+        ds2 = self.dist(intersection, s2.position)
+        d_snake = self.dist(s1.position, s2.position)
+        if ds2 > d_snake or ds1 > d_snake:
+            return None
+
+        # Check if it's too far from the GridCellEdge endpoints to be valid
+        de1 = self.dist(intersection, e1.position)
+        de2 = self.dist(intersection, e2.position)
+        d_edge = self.dist(e1.position, e2.position)
+        if de1 > d_edge or de2 > d_edge:
+            return None
+
+        return Point(intersection[0, 0], intersection[0, 1])
+
+    def _compute_intersection(self, snake: snake.TSnake) -> [Point]:
         """
         Compute intersections between the grid and the snake in question
+        \nArguments:\n
+        * snake: snake.TSnake to compute intersections with
+        \nReturn:\n
+        * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
         """
-        # Get snake nodes, see which grid verticies they're closest to,
-        # grab all the edges between the verticies they're closest to,
-        # compute intersections
-        # enqueue grid vertex inside the snake
-
-        # nodes = snake.node_locations()
-        elements = snake.get_elements()  # TODO: Add this function to snake
+        # TODO: KNOWN BUG: If the grid intersects a node's exact position, that intersection
+        # is added to two edges (because the point is technically on two edges). Whatever the desired
+        # behavor is, should be a relatively easy fix since points at same location hash the same
+        elements = snake.elements  # TODO: Add this function to snake after merge
         intersections = []
         for element in elements:
-            node1, node2 = element.get_nodes()  # TODO: Add this function to snake
+            # Get all edges surrounding each node, and check each for intersections
+            node1, node2 = element.nodes  # TODO: Add this function to snake after merge
             index = self.get_closest_node(node1.position)
             edges_to_check = self.get_cell_edges(index)
             for edge in edges_to_check:
                 intersect_pt = self._get_element_intersection(element, edge)
                 if intersect_pt is not None:
                     intersections.append(intersect_pt)
+                    edge.add_intersection(intersect_pt)
+                    # NOTE: Code to debug intersection points, see known bug above
+                    # if np.sum(intersect_pt.position - node1.position) == 0 or np.sum(intersect_pt.position - node2.position) == 0:
+                    #     print("Following intersection goes through existing point:")
+                    # print("Edge: {}, Node1({}, {}), Node2({}, {}), index: {}, intersect point: {}".format(
+                    #     edge, node1.position[0, 0], node1.position[0,1], node2.position[0, 0], node2.position[0, 1],
+                    #     index, intersect_pt
+                    # ))
+
+        return intersections
+
+    def get_snake_intersections(self) -> [[Point]]:
+        """
+        Compute intersections between all snakes on the grid and the grid.
+        \nArgs:\n
+        * None
+        \nReturn:\n
+        * list(list(Point)) containing the intersection points for each snake
+        """
+        intersections = []
+        for snake in self._snakes:
+            intersections.append(self._compute_intersection(snake))
         return intersections
 
 
@@ -390,15 +456,17 @@ class Grid(object):
 
 if __name__ == '__main__':
     # Import testing
-    snake = snake.Node(1, 1)
-    edge = GridCellEdge(1, 1)
+    positions = [(0.9, 0.9), (1.1, 0.9), (1.1, 1.1), (0.9, 1.1)]
+    nodes = [snake.Node(p[0], p[1]) for p in positions]
 
     # NOTE: Manual Testing for image functions
     # Replace plane.png with any image locally in the folder
     img = cv2.imread("plane.png")
-    grid = Grid(img, 1)
+    grid = Grid(img, 0.5)
     grey = grid.get_image_intensity()
     force = grid.get_image_force(250)
+
+    snake = snake.TSnake(nodes, force, grey, 1, 1, 1, 1)
 
     cv2.imshow("image", img)
     cv2.imshow("grey_image", grey)
@@ -423,14 +491,20 @@ if __name__ == '__main__':
     print("{} total edges, {} unique edges, total/unique = {}, expect about 2".format(
         count, len(grid.edges), count/len(grid.edges)))
 
-    pos = np.array([2.36, 3.40])
-    pos_frac = pos - np.fix(pos)
-    pos_whole = pos - pos_frac
-    rem = np.fmod(pos_frac, 2)
-    print(rem)
-    idxs = np.array((pos-rem)/2, dtype=int)
+    # Testing intersection finding math
+    position = np.array([0.9, 0.9])
+    pos_frac = position - np.fix(position)
+    pos_whole = position - pos_frac
+    remainder = np.fmod(pos_frac, 1)
+    idx = np.array((position-remainder)/1, dtype=int)
 
-    print(idxs)
+    print("IDXS: {}".format(idx))
 
     a, b = np.array([1, 1]), np.array([2, 4])
     print(grid.dist(a, b))
+
+    # testing actual intersection finding
+    grid.add_snake(snake)
+    intersections = grid.get_snake_intersections()
+    print("Intersections, 6 expected, found {}".format(len(intersections[0])))
+    print(intersections)
