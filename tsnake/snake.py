@@ -223,13 +223,13 @@ class TSnake(object):
         """
         L = self.compute_matrix()
 
-        X = np.zeros((1,self.num_nodes))
-        Y = np.zeros((1,self.num_nodes))
+        X = np.zeros((self.num_nodes, 1))
+        Y = np.zeros((self.num_nodes, 1))
 
         for i in range(self.num_nodes):
-            pos = self.nodes[i].position()
-            X[i] = pos[0]
-            Y[i] = pos[1]
+            pos = self.nodes[i].position
+            X[i][0] = pos[0][0]
+            Y[i][0] = pos[0][1]
         
         for i in range (M):
             #assume force is external potential force
@@ -270,29 +270,6 @@ class TSnake(object):
         """
         raise NotImplementedError
     
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
             
             
             
