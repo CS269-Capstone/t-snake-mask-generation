@@ -292,11 +292,23 @@ class MaskedRegion(object):
         if self._initial_tsnake is not None:
             nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
             nodes = np.array(nodes).reshape(len(nodes), 2)
+
+            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.elements], dtype=np.float32)
+            norms = norms.reshape(len(norms),2)
+
+            norms += nodes[:len(norms)]
+            # How many terminal and initial nodes to show in different colors
+            buffer = 5
+            ax4.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', s=3, alpha=0.5)
             
-            ax4.scatter(nodes[:, 0], nodes[:, 1], c='red', s=3, alpha=0.5)
-            
+            # Visualize normals, and initial nodes (white), terminal nodes (yellow)
+            ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='white', s=3, alpha=0.9)
+            ax4.scatter(nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9)
+            ax4.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
+
             for i in range(len(nodes)-1):
                 ax4.plot(nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5)
+                ax4.plot([nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', lw=1, alpha=0.5)
         
         plt.tight_layout()
         plt.show()
@@ -357,7 +369,11 @@ class MaskedRegion(object):
         
         # pixels on the boundary between masked and unmasked
         edge_pixels = self._find_edge_pixels()
-        
+
+        # Pre-process sort to get right-handed spiral for normal init
+        # This is necessary to get normal vectors to initialize properly
+        edge_pixels.sort(key=lambda x:(x[0], x[1]), reverse=True)
+
         step = int(np.floor(len(edge_pixels) / N))
         step = max(step, 1)
         if verbose:

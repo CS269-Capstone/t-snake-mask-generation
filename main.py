@@ -20,10 +20,20 @@ if __name__ == "__main__":
 
     regions = init.compute_masked_regions(image, mask)
     tsnakes = []
+
+    ### Parameters for TSnakes ### 
+    sigma = 20.0  # gaussian filter sigma
+    p = 1.0       # scale final image force with p
+    c = 2.0       # scale gradient magnitude of image (applied before p)
+    a = 1.0       # tension parameter
+    b = 1.0       # bending parameter
+    gamma = 1.0   # friction coefficient
+    dt = 1.0      # time step
+    
     for region in regions:
         tsnake = region.initialize_tsnake(
-            N=1000, p=1.0, c=1.0, sigma=1.0, a=1.0, b=1.0, gamma=1.0,
-            dt=0.01
+            N=1000, p=p, c=c, sigma=sigma, a=a, b=b, gamma=gamma,
+            dt=dt
         )
         tsnakes.append(tsnake)
         # region.visualize() # NOTE: To show tsnakes on images, uncomment
@@ -38,7 +48,7 @@ if __name__ == "__main__":
 
     # Update grid
     # NOTE: Uncomment for force, expensive calculation
-    # force = grid.get_image_force(2,2,2)
+    force = grid.get_image_force(2,2,2)
     grid.gen_simplex_grid()
     print("Simplex Grid shape: {}".format(grid.grid.shape))
 
@@ -51,58 +61,32 @@ if __name__ == "__main__":
     intersections = grid.get_snake_intersections()
     print(intersections)
 
-    if False:  # Manual tests of grid
-        # Import testing
-        positions = [(0.9, 0.9), (1.1, 0.9), (1.1, 1.1), (0.9, 1.1)]
-        nodes = [Node(p[0], p[1]) for p in positions]
+    # Test snake evolution
+    M = 20 #number of m-steps (iterations)
+    snake = tsnakes[-1]
 
-        # NOTE: Manual Testing for image functions
-        # Replace plane.png with any image locally in the folder
-        img = cv2.imread("tsnake/plane.png")
-        grid = Grid(img, 0.5)
-        grey = grid.get_image_intensity()
-        force = grid.get_image_force(250)
+    # X and Y are matrices to save the position of the 
+    # snake for every iteration
+    X = np.zeros((snake.num_nodes,M+1))
+    Y = np.zeros((snake.num_nodes,M+1))
 
-        snake = TSnake(nodes, force, grey, 1, 1, 1, 1)
+    #save the initial position of the snake
+    for i in range(snake.num_nodes):
+        pos = snake.nodes[i].position
+        X[i][0] = pos[0][0]
+        Y[i][0]= pos[0][1]
 
-        cv2.imshow("image", img)
-        cv2.imshow("grey_image", grey)
-        cv2.imshow("force_image", force)
-        key = cv2.waitKey(0)
+    #run for M steps
+    for j in range(M):
+        #print(out[200,:,0])
+        snake.m_step(1)
 
-        pts = [[Point(1, 1), Point(1, 1)],
-               [Point(1, 3), Point(1, 4)]]
+        #save the updated positions of the nodes
+        for i in range(snake.num_nodes):
+            pos = snake.nodes[i].position
+            #print(pos)
+            X[i][j+1] = pos[0][0]
+            Y[i][j+1]= pos[0][1]
 
-        pts = np.array(pts)
-        print("Representation format is (pt):hash")
-        print(str(pts))
-        assert pts[0][0] == pts[0][1], "Point's should be equal"
 
-        grid.gen_simplex_grid()
-        print("Simplex Grid shape: {}".format(grid.grid.shape))
-
-        count = 0
-        for i in range(grid.grid.shape[0]):
-            for j in range(grid.grid.shape[1]):
-                count += len(grid.grid[i, j].adjacent_edges)
-        print("{} total edges, {} unique edges, total/unique = {}, expect about 2".format(
-            count, len(grid.edges), count/len(grid.edges)))
-
-        # Testing intersection finding math
-        position = np.array([0.9, 0.9])
-        pos_frac = position - np.fix(position)
-        pos_whole = position - pos_frac
-        remainder = np.fmod(pos_frac, 1)
-        idx = np.array((position-remainder)/1, dtype=int)
-
-        print("IDXS: {}".format(idx))
-
-        a, b = np.array([1, 1]), np.array([2, 4])
-        print(dist(a, b))
-
-        # testing actual intersection finding
-        grid.add_snake(snake)
-        intersections = grid.get_snake_intersections()
-        print("Intersections, 6 expected, found {}".format(
-            len(intersections[0])))
-        print(intersections)
+   

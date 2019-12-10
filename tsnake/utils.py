@@ -84,10 +84,10 @@ class UtilPoint(object):
             return self._y < other._y
 
     def __sub__(self, other):
-        return (self._x - other._x, self._y - other._y)
+        return np.array([self._x - other._x, self._y - other._y], dtype=np.float32)
 
     def __add__(self, other):
-        return (self._x + other._x, self._y + other._y)
+        return np.array([self._x + other._x, self._y + other._y], dtype=np.float32)
 
 
 class UtilEdge(object):
@@ -109,9 +109,9 @@ class UtilEdge(object):
         * None
         ==========================================
         """
-        pts = sorted([point1, point2])
-        self._point1 = pts[0]  # todo maybe argchecks
-        self._point2 = pts[1]
+        # pts = sorted([point1, point2])
+        self._point1 = point1  # todo maybe argchecks
+        self._point2 = point2
 
     def get_perpendicular(self) -> np.array:
         """
@@ -119,11 +119,11 @@ class UtilEdge(object):
         edge
         """
         x, y = self._point2 - self._point1
-        return np.array([-y, x])
+        return np.array([-y, x], dtype=np.float32)
 
     @property
     def endpoints(self):
-        return np.array([self._point1, self._point2])  # .reshape(1, 2)
+        return np.array([self._point1, self._point2])
 
     def __str__(self):
         return "<{}, {}>".format(str(self._point1), str(self._point2))
@@ -132,7 +132,9 @@ class UtilEdge(object):
         return self.__str__() + ":" + str(self.__hash__())
 
     def __hash__(self):
-        return hash((self._point1, self._point2))
+        return hash(tuple(sorted([self._point1, self._point2])))
 
     def __eq__(self, other):
-        return self._point1 == other._point1 and self._point2 == other._point2
+        pts1 = sorted(self.endpoints)
+        pts2 = sorted(other.endpoints)
+        return np.all(pts1 == pts2)

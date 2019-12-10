@@ -239,13 +239,14 @@ class Grid(object):
 
         return self.image_force
 
-    def get_image_intensity(self):
+    def get_image_intensity(self, threshold):
         """
         Compute's intensity of self.image
 
         Args:
         ========================
-        None
+        (int) threshold:
+        * Threshold value, intensities above this result in 1, else -1, from equation (5)
         ========================
         Return:
         ========================
@@ -254,7 +255,11 @@ class Grid(object):
         ========================
         """
         if self.image_intensity is None:
-            self.image_intensity = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+            # self.image_intensity = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+            self.image_intensity = self.image
+            mask = self.image_intensity < threshold
+            self.image_intensity[mask] = -1
+            self.image_intensity[~mask] = 1
         return self.image_intensity
 
     def add_snake(self, new_snake):
