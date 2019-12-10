@@ -3,10 +3,11 @@ Module containing implementations of the ACID technique.
 """
 
 import numpy as np
-import snake as snake
-from utils import UtilPoint as uPoint
-from utils import UtilEdge as uEdge
-from utils import dist, seg_intersect
+from scipy.ndimage import gaussian_filter
+from .snake import TSnake, Element, Node
+from .utils import UtilPoint as uPoint
+from .utils import UtilEdge as uEdge
+from .utils import dist, seg_intersect
 import cv2
 
 
@@ -34,7 +35,6 @@ class Point(uPoint):
         * None: Stores edge in self.adjacent_edges dictionary
         '''
         self.adjacent_edges[edge] = edge
-
 
 
 class GridCellEdge(uEdge):
@@ -116,12 +116,13 @@ class Grid(object):
         TODO: implement Freudenthal triangulation
         https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
         """
-        assert isinstance(image, np.ndarray)
-        assert len(image.shape) == 3  # height * width * color channels
+        assert isinstance(
+            image, np.ndarray), "Image is of type: {}".format(type(image))
+        # assert len(image.shape) == 3  # height * width * color channels
 
         # Raw image
         self.image = image
-        self.m, self.n, self.d = image.shape
+        self.m, self.n = image.shape
 
         # Image matrix after force and intensity function
         self.image_force = None
@@ -176,12 +177,9 @@ class Grid(object):
         """
         m_steps = None
         n_steps = None
-        if self.scale <= 1:
-            m_steps = int(self.m / self.scale)
-            n_steps = int(self.n / self.scale)
-        else:
-            m_steps = int(self.scale / self.m)
-            n_steps = int(self.scale / self.n)
+
+        m_steps = int(self.m / self.scale)
+        n_steps = int(self.n / self.scale)
 
         self.grid = np.empty((m_steps, n_steps), dtype=object)
         for i in range(m_steps):
@@ -199,25 +197,45 @@ class Grid(object):
                         p2 = self.grid[i-1, j+1]
                         self._store_edge(curr_pt, p2)  # diagnoal edge
 
-    def get_image_force(self, threshold):
+    def get_image_force(self, sigma, c, p):
         """
         Compute's force of self.image
-        TODO: Use cole's image force computation, this one is incorrect
         Args:
-        ========================
-        (int) threshold:
-        * integer threshold, pixels with intensities above this value will be set to 1, else 0
-        ========================
-        Return:
-        ========================
-        (np.array) force: 
-        * (self.image.shape[0] by self.image.shape[1]) boolean array of 0 and 1
-        ========================
+        ============================================
+        (float) sigma: 
+        * The hyperparameter sigma from Equation (A.4).
+
+        (float) c:
+        * The hyperparameter c from Equation (A.4).
+
+        (float) p:
+        * The hyperparameter p from Equation (7).
+        ============================================
+
+        Returns:
+        ============================================
+        A np.array of shape (n, m, 2) containing the computed values of 
+        Equation (7) at each pixel in the image.
+        ============================================
         """
         if self.image_force is None:
-            intensity = self.get_image_intensity()
-            self.image_force = np.zeros(intensity.shape) - 1
-            self.image_force[intensity >= threshold] = 1
+            # Apply Gaussian smoothing
+            smoothed = gaussian_filter(self.image, sigma=sigma)
+
+            # Take the gradient
+            x_grad, y_grad = np.gradient(smoothed)
+            # Compute pixel-wise magnitudes
+            mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
+            # Multiply by -c
+            mags = mags * -c
+
+            x_grad, y_grad = np.gradient(mags)
+            out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
+            out[:, :, 0] = x_grad
+            out[:, :, 1] = y_grad
+
+            # Scale the potential by p
+            self.image_force = p * out
 
         return self.image_force
 
@@ -243,7 +261,7 @@ class Grid(object):
         """
         Add a new snake to the grid
         """
-        # assert isinstance(new_snake, snake.TSnake) # TODO: this line doesn't work
+        # assert isinstance(new_snake, TSnake) # TODO: this line doesn't work
         self._snakes.append(new_snake)
 
     def get_closest_node(self, position: np.array) -> np.array:
@@ -279,8 +297,7 @@ class Grid(object):
                     edges.add(pt.adjacent_edges[key])
         return edges
 
-
-    def _get_element_intersection(self, element: snake.Element, edge: GridCellEdge) -> Point:
+    def _get_element_intersection(self, element: Element, edge: GridCellEdge) -> Point:
         """
         Get intersection between snake element and grid-cell-edge
         \nargs:\n
@@ -315,11 +332,11 @@ class Grid(object):
 
         return Point(intersection[0, 0], intersection[0, 1])
 
-    def _compute_intersection(self, snake: snake.TSnake) -> [Point]:
+    def _compute_intersection(self, snake: TSnake) -> [Point]:
         """
         Compute intersections between the grid and the snake in question
         \nArguments:\n
-        * snake: snake.TSnake to compute intersections with
+        * snake: TSnake to compute intersections with
         \nReturn:\n
         * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
         """
@@ -370,56 +387,4 @@ class Grid(object):
 
 
 if __name__ == '__main__':
-    # Import testing
-    positions = [(0.9, 0.9), (1.1, 0.9), (1.1, 1.1), (0.9, 1.1)]
-    nodes = [snake.Node(p[0], p[1]) for p in positions]
-
-    # NOTE: Manual Testing for image functions
-    # Replace plane.png with any image locally in the folder
-    img = cv2.imread("plane.png")
-    grid = Grid(img, 0.5)
-    grey = grid.get_image_intensity()
-    force = grid.get_image_force(250)
-
-    snake = snake.TSnake(nodes, force, grey, 1, 1, 1, 1)
-
-    cv2.imshow("image", img)
-    cv2.imshow("grey_image", grey)
-    cv2.imshow("force_image", force)
-    key = cv2.waitKey(0)
-
-    pts = [[Point(1, 1), Point(1, 1)],
-           [Point(1, 3), Point(1, 4)]]
-
-    pts = np.array(pts)
-    print("Representation format is (pt):hash")
-    print(str(pts))
-    assert pts[0][0] == pts[0][1], "Point's should be equal"
-
-    grid.gen_simplex_grid()
-    print("Simplex Grid shape: {}".format(grid.grid.shape))
-
-    count = 0
-    for i in range(grid.grid.shape[0]):
-        for j in range(grid.grid.shape[1]):
-            count += len(grid.grid[i, j].adjacent_edges)
-    print("{} total edges, {} unique edges, total/unique = {}, expect about 2".format(
-        count, len(grid.edges), count/len(grid.edges)))
-
-    # Testing intersection finding math
-    position = np.array([0.9, 0.9])
-    pos_frac = position - np.fix(position)
-    pos_whole = position - pos_frac
-    remainder = np.fmod(pos_frac, 1)
-    idx = np.array((position-remainder)/1, dtype=int)
-
-    print("IDXS: {}".format(idx))
-
-    a, b = np.array([1, 1]), np.array([2, 4])
-    print(grid.dist(a, b))
-
-    # testing actual intersection finding
-    grid.add_snake(snake)
-    intersections = grid.get_snake_intersections()
-    print("Intersections, 6 expected, found {}".format(len(intersections[0])))
-    print(intersections)
+    pass

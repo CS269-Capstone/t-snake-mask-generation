@@ -56,6 +56,14 @@ class UtilPoint(object):
     @property
     def position(self):
         return np.array([self._x, self._y]).reshape(1, 2)
+    
+    @property
+    def x(self):
+        return self._x
+    
+    @property
+    def y(self):
+        return self._y
 
     def __str__(self):
         return "({}, {})".format(self._x, self._y)

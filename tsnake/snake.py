@@ -5,8 +5,8 @@ up to and including Section 3.2 of the paper.
 
 import numpy as np
 from scipy.linalg import solve_triangular
-from utils import UtilPoint as uPoint
-from utils import UtilEdge as uEdge
+from .utils import UtilPoint as uPoint
+from .utils import UtilEdge as uEdge
 
 # Implementation Notes: https://www.crisluengo.net/archives/217#more-217
 
