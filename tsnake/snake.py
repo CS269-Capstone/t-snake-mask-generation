@@ -5,27 +5,20 @@ up to and including Section 3.2 of the paper.
 
 import numpy as np
 from scipy.linalg import solve_triangular
+from utils import UtilPoint as uPoint
+from utils import UtilEdge as uEdge
 
 # Implementation Notes: https://www.crisluengo.net/archives/217#more-217
 
-class Node(object):
+class Node(uPoint):
     """
     A class representing a single node in a T-snake.
     """
     
     def __init__(self, x, y):
-        self.x = x  # todo: arg check if we care
-        self.y = y
-       
-    @property
-    def position(self):
-        return np.array([self.x, self.y]).reshape(1, 2)
-
-    def update(self, x, y):
-        self.x = x  # todo: arg check if we care
-        self.y = y
+        super().__init__(x, y)
            
-class Element(object):
+class Element(uEdge):
     """
     Class representing an element / edge between two nodes in the T-snake.
     
@@ -37,12 +30,13 @@ class Element(object):
     def __init__(self, node1, node2):
         assert isinstance(node1, Node)
         assert isinstance(node2, Node)
-        self.node1 = node1
-        self.node2 = node2
+        super().__init__(node1, node2)
+        self._node1 = node1
+        self._node2 = node2
 
     @property
     def nodes(self):
-        return np.array([self.node1, self.node2]) #.reshape(1,2)   
+        return np.array([self._node1, self._node2])
     
     def intersects_grid_cell(self, grid_cell):
         # TODO: clean this up

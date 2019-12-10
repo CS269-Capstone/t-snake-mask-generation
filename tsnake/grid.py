@@ -4,19 +4,20 @@ Module containing implementations of the ACID technique.
 
 import numpy as np
 import snake as snake
+from utils import UtilPoint as uPoint
+from utils import UtilEdge as uEdge
+from utils import dist, seg_intersect
 import cv2
 
 
-class Point(object):
+class Point(uPoint):
     """
     Represents a point on a grid with x and y components
     """
 
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        super().__init__(x, y)
         self.adjacent_edges = dict()
-        # self.adjacent_points = set()
 
     # TODO@allen:
     # each point keeps track of edges and maintains set of all points
@@ -34,30 +35,9 @@ class Point(object):
         '''
         self.adjacent_edges[edge] = edge
 
-    @property
-    def position(self):
-        return np.array([self.x, self.y]).reshape(1, 2)
-
-    def __str__(self):
-        return "({}, {})".format(self.x, self.y)
-
-    def __repr__(self):
-        return self.__str__()  # + ":" + str(self.__hash__()) #NOTE: For debugging, can add hash
-
-    def __hash__(self):
-        return hash((self.x, self.y))
-
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
-
-    def __lt__(self, other):
-        if self.x != other.x:
-            return self.x < other.x
-        else:
-            return self.y < other.y
 
 
-class GridCellEdge(object):
+class GridCellEdge(uEdge):
     """
     Represents one of the sides / cell-edges in the grid. 
     """
@@ -76,28 +56,10 @@ class GridCellEdge(object):
         * None
         ==========================================
         """
-        pts = sorted([point1, point2])
-        self._point1 = pts[0]  # todo maybe argchecks
-        self._point2 = pts[1]
+        super().__init__(point1, point2)
 
         # TODO: implement this data structure
         self.intersections = list()
-
-    @property
-    def endpoints(self):
-        return np.array([self._point1, self._point2])  # .reshape(1, 2)
-
-    def __str__(self):
-        return "<{}, {}>".format(str(self._point1), str(self._point2))
-
-    def __repr__(self):
-        return self.__str__() + ":" + str(self.__hash__())
-
-    def __hash__(self):
-        return hash((self._point1, self._point2))
-
-    def __eq__(self, other):
-        return self._point1 == other._point1 and self._point2 == other._point2
 
     def add_intersection(self, point: Point) -> None:
         """
@@ -317,53 +279,6 @@ class Grid(object):
                     edges.add(pt.adjacent_edges[key])
         return edges
 
-    @classmethod
-    def perp(cls, a: np.array) -> np.array:
-        """
-        return the perpendicular of a 
-        args:
-        * a: (1,2) np array indicating a vector
-        return:
-        * b: (1,2) np array indicating a vector
-        """
-        b = np.empty_like(a)
-        b[0] = -a[1]
-        b[1] = a[0]
-        return b
-
-    @classmethod
-    def dist(cls, a: np.array, b: np.array) -> float:
-        """
-        Return the distance between a and b
-        args:
-
-        """
-        return np.sqrt(np.sum(np.power(a-b, 2)))
-
-    @classmethod
-    def seg_intersect(cls, a1, a2, b1, b2, decimal=3):
-        """ 
-        Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
-        Args: all are expected as (1,2) numpy arrays
-        * a1: [x, y] a point on the first line
-        * a2: [x, y] another point on the first line
-        * b1: [x, y] a point on the second line
-        * b2: [x, y] another point on the second line
-        * decimal: int (optional): Number of decimals to round to, default is 3
-        return:
-        * (1,2) np array denoting [x, y] coordinates of intersection
-        """
-        s = np.vstack([a1, a2, b1, b2])        # s for stacked
-        h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
-        l1 = np.cross(h[0], h[1])           # get first line
-        l2 = np.cross(h[2], h[3])           # get second line
-        x, y, z = np.cross(l1, l2)          # point of intersection
-        result = None
-        if z == 0:                          # lines are parallel
-            result = np.array([float('inf'), float('inf')]).reshape(1, 2)
-        else:
-            result = np.array([x/z, y/z]).reshape(1, 2)
-        return np.around(result, decimal)
 
     def _get_element_intersection(self, element: snake.Element, edge: GridCellEdge) -> Point:
         """
@@ -377,7 +292,7 @@ class Grid(object):
         e1, e2 = edge.endpoints
 
         # Find intersection candidate
-        intersection = self.seg_intersect(
+        intersection = seg_intersect(
             s1.position, s2.position, e1.position, e2.position)
 
         # Check if the two lines are parallel
@@ -385,16 +300,16 @@ class Grid(object):
             return None
 
         # Check if it's too far from the snake element endpoints to be valid
-        ds1 = self.dist(intersection, s1.position)
-        ds2 = self.dist(intersection, s2.position)
-        d_snake = self.dist(s1.position, s2.position)
+        ds1 = dist(intersection, s1.position)
+        ds2 = dist(intersection, s2.position)
+        d_snake = dist(s1.position, s2.position)
         if ds2 > d_snake or ds1 > d_snake:
             return None
 
         # Check if it's too far from the GridCellEdge endpoints to be valid
-        de1 = self.dist(intersection, e1.position)
-        de2 = self.dist(intersection, e2.position)
-        d_edge = self.dist(e1.position, e2.position)
+        de1 = dist(intersection, e1.position)
+        de2 = dist(intersection, e2.position)
+        d_edge = dist(e1.position, e2.position)
         if de1 > d_edge or de2 > d_edge:
             return None
 
