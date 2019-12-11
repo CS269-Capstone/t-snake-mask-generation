@@ -293,10 +293,10 @@ class MaskedRegion(object):
             nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
             nodes = np.array(nodes).reshape(len(nodes), 2)
 
-            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.elements], dtype=np.float32)
-            norms = norms.reshape(len(norms),2)
+            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], dtype=np.float32)
+            norms = norms.reshape(-1,2)
 
-            norms += nodes[:len(norms)]
+            norms += nodes
             # How many terminal and initial nodes to show in different colors
             buffer = 5
             ax4.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', s=3, alpha=0.5)

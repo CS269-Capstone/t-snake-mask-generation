@@ -55,38 +55,7 @@ if __name__ == "__main__":
     # Add snakes to grid
     for s in tsnakes:
         grid.add_snake(s)
-        break
-
-    # Compute snake intersections with grid
-    intersections = grid.get_snake_intersections()
-    print(intersections)
-
-    # Test snake evolution
-    M = 20 #number of m-steps (iterations)
-    snake = tsnakes[-1]
-
-    # X and Y are matrices to save the position of the 
-    # snake for every iteration
-    X = np.zeros((snake.num_nodes,M+1))
-    Y = np.zeros((snake.num_nodes,M+1))
-
-    #save the initial position of the snake
-    for i in range(snake.num_nodes):
-        pos = snake.nodes[i].position
-        X[i][0] = pos[0][0]
-        Y[i][0]= pos[0][1]
-
-    #run for M steps
-    for j in range(M):
-        #print(out[200,:,0])
-        snake.m_step(1)
-
-        #save the updated positions of the nodes
-        for i in range(snake.num_nodes):
-            pos = snake.nodes[i].position
-            #print(pos)
-            X[i][j+1] = pos[0][0]
-            Y[i][j+1]= pos[0][1]
+        
 
 
    

@@ -20,10 +20,23 @@ class Node(uPoint):
 
     def __init__(self, x, y):
         super().__init__(x, y)
+        self._normal = None
     
     def update(self, x, y):
         self._x = x
         self._y = y
+    
+    def set_normal(self, norm):
+        assert isinstance(
+            norm, np.ndarray), "Norm was type {}".format(type(norm))
+        assert norm.shape == (
+            2,), "Norm should be np array of (2,), got {}".format(norm.shape)
+        assert norm is not None
+        self._normal = norm
+    
+    @property
+    def normal(self):
+        return self._normal
 
 
 class Element(uEdge):
@@ -105,7 +118,7 @@ class TSnake(object):
         self.dt = dt
 
         self._elements = []
-        self._normals = []
+        
         # Connect each node[i] --> node[i+1]
         for i in range(len(nodes)-1):
             self._elements.append(Element(self.nodes[i], self.nodes[i+1]))
@@ -119,6 +132,7 @@ class TSnake(object):
         Compute normals
         TODO: Finish doc, see if we can optimize this,
         Computation is O(n) in the number of edges
+        Returns np array of length(# nodes, 2) representing the normal at each node
         """
 
         for i in range(len(self._elements)):
@@ -191,6 +205,13 @@ class TSnake(object):
                     if (x * nx) > 0 and (y * ny) > 0:
                         norm *= -1
             self._elements[i].set_normal(norm)
+
+        # Now we find the normals for each node, which 
+        # are the average of the normals of the two adjacent elements
+        for i in range(len(self._elements)):
+            prev = self._elements[i-1]
+            current = self._elements[i]
+            self.nodes[i].set_normal(0.5 * (prev.normal + current.normal))
 
     @property
     def elements(self):
@@ -337,6 +358,9 @@ class TSnake(object):
             Y[i][0] = pos[0][1]
 
         for i in range(M):
+            # TODO: Update assumptions below, now that force and normals
+            # have been calculated
+
             # assume force is external potential force
             fx = self.bilinear_interpolate(self.force[:, :, 0], X, Y)
             fy = self.bilinear_interpolate(self.force[:, :, 1], X, Y)
