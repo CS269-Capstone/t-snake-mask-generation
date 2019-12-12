@@ -3,11 +3,10 @@ Module containing implementations of the ACID technique.
 """
 
 import numpy as np
-from scipy.ndimage import gaussian_filter
 from .snake import TSnake, Element, Node
 from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
-from .utils import dist, seg_intersect
+from .utils import dist, seg_intersect, img_force, img_inflation_force
 import cv2
 
 
@@ -219,30 +218,12 @@ class Grid(object):
         ============================================
         """
         if self.image_force is None:
-            # Apply Gaussian smoothing
-            smoothed = gaussian_filter(self.image, sigma=sigma)
-
-            # Take the gradient
-            x_grad, y_grad = np.gradient(smoothed)
-            # Compute pixel-wise magnitudes
-            mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
-            # Multiply by -c
-            mags = mags * -c
-
-            x_grad, y_grad = np.gradient(mags)
-            out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
-            out[:, :, 0] = x_grad
-            out[:, :, 1] = y_grad
-
-            # Scale the potential by p
-            self.image_force = p * out
-
+            self.image_force = img_force(self.image,sigma, c, p)
         return self.image_force
 
-    def get_image_intensity(self, threshold):
+    def get_inflation_force(self, threshold):
         """
-        Compute's intensity of self.image
-
+        Compute F(I(img)), equation (5) from the paper, for inflation force
         Args:
         ========================
         (int) threshold:
@@ -250,16 +231,12 @@ class Grid(object):
         ========================
         Return:
         ========================
-        (np.array) intensities: 
+        (np.array) inflation forces (+1 or -1): 
         * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
         ========================
         """
         if self.image_intensity is None:
-            # self.image_intensity = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-            self.image_intensity = self.image
-            mask = self.image_intensity < threshold
-            self.image_intensity[mask] = -1
-            self.image_intensity[~mask] = 1
+            self.image_intensity = img_inflation_force(self.image, threshold)
         return self.image_intensity
 
     def add_snake(self, new_snake):

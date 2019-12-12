@@ -1,10 +1,72 @@
 import numpy as np
+from scipy.ndimage import gaussian_filter
 
 """
 Module containing utilities and base 
 classes to be shared by Snake and Grid
 """
 
+def img_inflation_force(
+    image: np.array, threshold: int) -> np.array:
+    """
+    Compute F(I(img)), equation (5) from the paper, for inflation force
+    Args:
+    ========================
+    (int) threshold:
+    * Threshold value, intensities above this result in 1, else -1, from equation (5)
+    ========================
+    Return:
+    ========================
+    (np.array) inflation forces (+1 or -1): 
+    * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
+    ========================
+    """
+    image_intensity = image
+    mask = image_intensity < threshold
+    image_intensity[mask] = 1
+    image_intensity[~mask] = -1
+    return image_intensity
+
+
+def img_force(image: np.array, sigma: int, c: int, p: int) -> np.array:
+    """
+    Compute's force of self.image
+    Args:
+    ============================================
+    (float) sigma: 
+    * The hyperparameter sigma from Equation (A.4).
+
+    (float) c:
+    * The hyperparameter c from Equation (A.4).
+
+    (float) p:
+    * The hyperparameter p from Equation (7).
+    ============================================
+
+    Returns:
+    ============================================
+    A np.array of shape (n, m, 2) containing the computed values of 
+    Equation (7) at each pixel in the image.
+    ============================================
+    """
+    # Apply Gaussian smoothing
+    smoothed = gaussian_filter(image, sigma=sigma)
+
+    # Take the gradient
+    x_grad, y_grad = np.gradient(smoothed)
+    # Compute pixel-wise magnitudes
+    mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
+    # Multiply by -c
+    mags = mags * -c
+
+    x_grad, y_grad = np.gradient(mags)
+    out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
+    out[:, :, 0] = x_grad
+    out[:, :, 1] = y_grad
+
+    # Scale the potential by p
+    image_force = p * out
+    return image_force
 
 def dist(a: np.array, b: np.array) -> float:
     """

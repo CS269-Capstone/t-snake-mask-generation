@@ -8,7 +8,7 @@ from scipy.linalg import solve_triangular
 from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect
-# from tqdm import tqdm 
+# from tqdm import tqdm
 
 # Implementation Notes: https://www.crisluengo.net/archives/217#more-217
 
@@ -21,11 +21,7 @@ class Node(uPoint):
     def __init__(self, x, y):
         super().__init__(x, y)
         self._normal = None
-    
-    def update(self, x, y):
-        self._x = x
-        self._y = y
-    
+
     def set_normal(self, norm):
         assert isinstance(
             norm, np.ndarray), "Norm was type {}".format(type(norm))
@@ -33,7 +29,7 @@ class Node(uPoint):
             2,), "Norm should be np array of (2,), got {}".format(norm.shape)
         assert norm is not None
         self._normal = norm
-    
+
     @property
     def normal(self):
         return self._normal
@@ -118,7 +114,7 @@ class TSnake(object):
         self.dt = dt
 
         self._elements = []
-        
+
         # Connect each node[i] --> node[i+1]
         for i in range(len(nodes)-1):
             self._elements.append(Element(self.nodes[i], self.nodes[i+1]))
@@ -129,10 +125,18 @@ class TSnake(object):
 
     def _compute_normals(self):
         """
-        Compute normals
-        TODO: Finish doc, see if we can optimize this,
-        Computation is O(n) in the number of edges
-        Returns np array of length(# nodes, 2) representing the normal at each node
+        Compute normals for each element and node, the computation is O(n) in the number of edges
+        Args:
+        =====================================================
+        None, uses the initialized snake elements and nodes, but
+        expects elements to be initialized counter clockwise for 
+        any closed contour
+        =====================================================
+        Return:
+        =====================================================
+        None, stores the normal to each element and node as a 
+        numpy array of dimension (2,), i.e. [x y]
+        =====================================================
         """
 
         for i in range(len(self._elements)):
@@ -141,10 +145,10 @@ class TSnake(object):
             norm = first_element.get_perpendicular()
             norm /= np.sum(np.abs(norm))
             p1, p2 = first_element.endpoints
-            pnx, pny = None, None # previous normal for x and y
+            pnx, pny = None, None  # previous normal for x and y
             if i == 0:
                 for j in range(len(self._elements)):
-                    # We don't care about the normal's 
+                    # We don't care about the normal's
                     # intersection with the edge it
                     # originates from
                     if j == i:
@@ -156,7 +160,7 @@ class TSnake(object):
                     # If they don't intersect at all, continue
                     if res is None:
                         continue
-                    # If they do intersect, make sure it isn't 
+                    # If they do intersect, make sure it isn't
                     # at a node on this edge
                     if not np.all(res == p1.position):
                         delta = res - p1.position
@@ -188,8 +192,8 @@ class TSnake(object):
                 # the same direction as the old one
                 p1, p2 = element.endpoints
                 res = seg_intersect(
-                        p1.position, p1.position + old_norm, 
-                        p2.position, p2.position + norm)
+                    p1.position, p1.position + old_norm,
+                    p2.position, p2.position + norm)
                 # If they don't intersect at all, continue
                 if res is None:
                     if (pnx * nx) < 0 and (pny * ny) < 0:
@@ -206,7 +210,7 @@ class TSnake(object):
                         norm *= -1
             self._elements[i].set_normal(norm)
 
-        # Now we find the normals for each node, which 
+        # Now we find the normals for each node, which
         # are the average of the normals of the two adjacent elements
         for i in range(len(self._elements)):
             prev = self._elements[i-1]
@@ -351,9 +355,12 @@ class TSnake(object):
 
         X = np.zeros((self.num_nodes, 1))
         Y = np.zeros((self.num_nodes, 1))
+        norms = np.zeros((self.num_nodes, 2))
 
         for i in range(self.num_nodes):
             pos = self.nodes[i].position
+            norms[i] = self.nodes[i].normal
+
             X[i][0] = pos[0][0]
             Y[i][0] = pos[0][1]
 
@@ -366,8 +373,10 @@ class TSnake(object):
             fy = self.bilinear_interpolate(self.force[:, :, 1], X, Y)
 
             # assume intensity is inflation force
-            px = self.bilinear_interpolate(self.intensity[:, :, 0], X, Y)
-            py = self.bilinear_interpolate(self.intensity[:, :, 1], X, Y)
+            pxy = self.bilinear_interpolate(self.intensity, X, Y)
+            # Get component of intensity on x and y directions
+            px = pxy * (norms[:, 0]).reshape(-1, 1)
+            py = pxy * (norms[:, 1]).reshape(-1, 1)
 
             # Update nodes
             temp = solve_triangular(

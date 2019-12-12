@@ -8,10 +8,10 @@ import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
 from scipy.spatial.distance import cdist
 
 from .snake import Node, TSnake
+from .utils import img_force, img_inflation_force
 
 
 # =====================================================
@@ -392,8 +392,11 @@ class MaskedRegion(object):
         if verbose:
             print('Total of %d T-snake nodes were initialized' % len(nodes))
         
+        # TODO@Cole: Replace hard-coded inflation force value, and
+        # do these computations exclusively in the grid? Less 
+        # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
-        intensity_grid = self.raw_image_portion  # grayscale image
+        intensity_grid = img_inflation_force(self.raw_image_portion, 100) # grayscale image
         
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, gamma, dt
@@ -448,24 +451,7 @@ class MaskedRegion(object):
         Equation (7) at each pixel in the image.
         ============================================
         """
-        # Apply Gaussian smoothing
-        smoothed = gaussian_filter(self.raw_image_portion, sigma=sigma)
-        
-        # Take the gradient
-        x_grad, y_grad = np.gradient(smoothed)
-        # Compute pixel-wise magnitudes
-        mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
-        # Multiply by -c
-        mags = mags * -c
-        
-        x_grad, y_grad = np.gradient(mags)
-        out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
-        out[:, :, 0] = x_grad
-        out[:, :, 1] = y_grad
-        
-        # Scale the potential by p
-        out = p * out
-        
+        out = img_force(self.raw_image_portion,sigma, c, p)
         return out
     
     def _find_edge_pixels(self):
