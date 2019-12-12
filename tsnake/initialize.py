@@ -41,7 +41,7 @@ def load_grayscale_image(path):
     return image
 
 
-def load_mask(path):
+def load_mask(path, convert=False):
     """
     Args:
     ==============
@@ -58,8 +58,13 @@ def load_mask(path):
     assert image is not None, 'failed to load mask at path=%s' % path
     
     # Some asserts to make sure the input image is as expected
-    # Mask should be binary 0/255
-    assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
+    if not convert:
+        # Mask should be binary 0/255
+        assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
+    else:
+        # If the mask is hand-made and not perfect
+        image[image >= 128 ] = 255
+        image[image < 128] = 0
     # Mask should be 3D
     assert len(image.shape) == 3
     assert image.shape[2] == 3
