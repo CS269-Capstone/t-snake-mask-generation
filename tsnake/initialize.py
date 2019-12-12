@@ -8,10 +8,10 @@ import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
 from scipy.spatial.distance import cdist
 
 from .snake import Node, TSnake
+from .utils import img_force, img_inflation_force
 
 
 # =====================================================
@@ -41,7 +41,7 @@ def load_grayscale_image(path):
     return image
 
 
-def load_mask(path):
+def load_mask(path, convert=False):
     """
     Args:
     ==============
@@ -58,8 +58,13 @@ def load_mask(path):
     assert image is not None, 'failed to load mask at path=%s' % path
     
     # Some asserts to make sure the input image is as expected
-    # Mask should be binary 0/255
-    assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
+    if not convert:
+        # Mask should be binary 0/255
+        assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
+    else:
+        # If the mask is hand-made and not perfect
+        image[image >= 128 ] = 255
+        image[image < 128] = 0
     # Mask should be 3D
     assert len(image.shape) == 3
     assert image.shape[2] == 3
@@ -292,11 +297,23 @@ class MaskedRegion(object):
         if self._initial_tsnake is not None:
             nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
             nodes = np.array(nodes).reshape(len(nodes), 2)
+
+            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], dtype=np.float32)
+            norms = norms.reshape(-1,2)
+
+            norms += nodes
+            # How many terminal and initial nodes to show in different colors
+            buffer = 5
+            ax4.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', s=3, alpha=0.5)
             
-            ax4.scatter(nodes[:, 0], nodes[:, 1], c='red', s=3, alpha=0.5)
-            
+            # Visualize normals, and initial nodes (white), terminal nodes (yellow)
+            ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='white', s=3, alpha=0.9)
+            ax4.scatter(nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9)
+            ax4.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
+
             for i in range(len(nodes)-1):
                 ax4.plot(nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5)
+                ax4.plot([nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', lw=1, alpha=0.5)
         
         plt.tight_layout()
         plt.show()
@@ -357,7 +374,11 @@ class MaskedRegion(object):
         
         # pixels on the boundary between masked and unmasked
         edge_pixels = self._find_edge_pixels()
-        
+
+        # Pre-process sort to get right-handed spiral for normal init
+        # This is necessary to get normal vectors to initialize properly
+        edge_pixels.sort(key=lambda x:(x[0], x[1]), reverse=True)
+
         step = int(np.floor(len(edge_pixels) / N))
         step = max(step, 1)
         if verbose:
@@ -376,8 +397,11 @@ class MaskedRegion(object):
         if verbose:
             print('Total of %d T-snake nodes were initialized' % len(nodes))
         
+        # TODO@Cole: Replace hard-coded inflation force value, and
+        # do these computations exclusively in the grid? Less 
+        # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
-        intensity_grid = self.raw_image_portion  # grayscale image
+        intensity_grid = img_inflation_force(self.raw_image_portion, 100) # grayscale image
         
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, gamma, dt
@@ -432,24 +456,7 @@ class MaskedRegion(object):
         Equation (7) at each pixel in the image.
         ============================================
         """
-        # Apply Gaussian smoothing
-        smoothed = gaussian_filter(self.raw_image_portion, sigma=sigma)
-        
-        # Take the gradient
-        x_grad, y_grad = np.gradient(smoothed)
-        # Compute pixel-wise magnitudes
-        mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
-        # Multiply by -c
-        mags = mags * -c
-        
-        x_grad, y_grad = np.gradient(mags)
-        out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))
-        out[:, :, 0] = x_grad
-        out[:, :, 1] = y_grad
-        
-        # Scale the potential by p
-        out = p * out
-        
+        out = img_force(self.raw_image_portion,sigma, c, p)
         return out
     
     def _find_edge_pixels(self):
