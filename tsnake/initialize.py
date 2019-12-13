@@ -274,8 +274,8 @@ class MaskedRegion(object):
     def __repr__(self):
         return self.__str__()
     
-    def visualize(self):
-        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    def visualize(self, figsize=(20, 20)):
+        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
         ax1.set_title('raw input mask')
         ax2.set_title('corresp. rect. mask-region')
         ax3.set_title('grayscale image portion')
@@ -298,22 +298,37 @@ class MaskedRegion(object):
             nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
             nodes = np.array(nodes).reshape(len(nodes), 2)
 
-            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], dtype=np.float32)
+            norms = np.array(
+                [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], 
+                dtype=np.float32
+            )
             norms = norms.reshape(-1,2)
 
             norms += nodes
             # How many terminal and initial nodes to show in different colors
             buffer = 5
-            ax4.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', s=3, alpha=0.5)
+            ax4.scatter(
+                nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', 
+                s=3, alpha=0.5
+            )
             
             # Visualize normals, and initial nodes (white), terminal nodes (yellow)
             ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='white', s=3, alpha=0.9)
-            ax4.scatter(nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9)
+            ax4.scatter(
+                nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9
+            )
             ax4.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
 
             for i in range(len(nodes)-1):
-                ax4.plot(nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5)
-                ax4.plot([nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', lw=1, alpha=0.5)
+                # Elements are plotted in red 
+                ax4.plot(
+                    nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+                )
+                # Normals are plotted in green
+                ax4.plot(
+                    [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', 
+                    lw=1, alpha=0.5
+                )
         
         plt.tight_layout()
         plt.show()
@@ -401,7 +416,8 @@ class MaskedRegion(object):
         # do these computations exclusively in the grid? Less 
         # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
-        intensity_grid = img_inflation_force(self.raw_image_portion, 100) # grayscale image
+        
+        intensity_grid = img_inflation_force(self.raw_image_portion, 100)
         
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, gamma, dt
@@ -456,7 +472,7 @@ class MaskedRegion(object):
         Equation (7) at each pixel in the image.
         ============================================
         """
-        out = img_force(self.raw_image_portion,sigma, c, p)
+        out = img_force(self.raw_image_portion, sigma, c, p)
         return out
     
     def _find_edge_pixels(self):

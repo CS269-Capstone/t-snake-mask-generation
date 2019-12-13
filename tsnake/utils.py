@@ -6,19 +6,24 @@ Module containing utilities and base
 classes to be shared by Snake and Grid
 """
 
-def img_inflation_force(
-    image: np.array, threshold: int) -> np.array:
+def img_inflation_force(image: np.array, threshold: int) -> np.array:
     """
-    Compute F(I(img)), equation (5) from the paper, for inflation force
+    Compute the inflationary force F(I(x, y)), equation (5) from the paper, for 
+    every integer-index (x, y) of the image.
+    
     Args:
     ========================
+    (np.array) image:
+    * A np.array of shape (m, n) containing the grayscale image. 
+    
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
     ========================
-    Return:
+    
+    Returns:
     ========================
     (np.array) inflation forces (+1 or -1): 
-    * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
+    * (m, n) array of of intensities (values of 0 to 255)
     ========================
     """
     image_intensity = image
@@ -28,9 +33,11 @@ def img_inflation_force(
     return image_intensity
 
 
-def img_force(image: np.array, sigma: int, c: int, p: int) -> np.array:
+def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     """
-    Compute's force of self.image
+    Computes an array of force values for the given image.
+    Equation (7) in the paper.
+    
     Args:
     ============================================
     (float) sigma: 
@@ -67,6 +74,7 @@ def img_force(image: np.array, sigma: int, c: int, p: int) -> np.array:
     # Scale the potential by p
     image_force = p * out
     return image_force
+
 
 def dist(a: np.array, b: np.array) -> float:
     """
@@ -200,3 +208,16 @@ class UtilEdge(object):
         pts1 = sorted(self.endpoints)
         pts2 = sorted(other.endpoints)
         return np.all(pts1 == pts2)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

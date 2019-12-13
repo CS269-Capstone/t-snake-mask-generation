@@ -95,7 +95,6 @@ class TSnake(object):
     * A list of Node instances, in order i=0, 1, 2, ..., N-1
     ===========================================
 
-    TODO: hyperparameters in constructor
     TODO: calculate intensity normal thingy
     TODO: comments for a,b, gamma
     """
@@ -104,9 +103,11 @@ class TSnake(object):
         for n in nodes:
             assert isinstance(n, Node)
         self.nodes = list(nodes)
+        
         # Force and intensity fields over the image, (n,m) np arrays
         self.force = force
         self.intensity = intensity
+        
         # Deformation parameters
         self.a = a
         self.b = b
@@ -125,7 +126,9 @@ class TSnake(object):
 
     def _compute_normals(self):
         """
-        Compute normals for each element and node, the computation is O(n) in the number of edges
+        Compute normals for each element and node, the computation is O(n) 
+        in the number of edges.
+        
         Args:
         =====================================================
         None, uses the initialized snake elements and nodes, but
@@ -228,35 +231,12 @@ class TSnake(object):
     @property
     def node_locations(self):
         """
-        # TODO: Store or compute normals somewhere
         Returns an (N, 2) matrix containing the current node locations for this T-snake.
         ( In the paper: $\bm{x}(t)$ )
         """
         N = self.num_nodes
         locs = [node.position for node in self.nodes]
         return np.array(locs).reshape(N, 2)
-
-    def compute_alpha(self):
-        """ Eq 2 """
-        raise NotImplementedError
-
-    def compute_beta(self):
-        """ Eq 3 """
-        raise NotImplementedError
-
-    def compute_rho(self):
-        """ Eq 4 """
-        raise NotImplementedError
-
-    def compute_f(self):
-        """ Eq 7 """
-        raise NotImplementedError
-
-    def compute_potential(self):
-        """
-        P(
-        """
-        raise NotImplementedError
 
     def compute_matrix(self):
         """
@@ -294,6 +274,7 @@ class TSnake(object):
         Computes bilinearly interpolated values for points (x,y) from image im.
         Follows (and modified) from Alex Flint's code: 
         https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
+        
         Args:
         ===========================================
         (2D numpy array) im: 
@@ -312,6 +293,8 @@ class TSnake(object):
         y0 = np.floor(y).astype(int)
 
         # make sure the coordinates are within the image
+        # @cole: will a correct implementation ever call this function on coords
+        #        outside of the image? shouldn't we throw an error if this happens?
         x0 = np.clip(x0, 0, im.shape[0]-1)
         y0 = np.clip(y0, 0, im.shape[1]-1)
 
@@ -368,11 +351,11 @@ class TSnake(object):
             # TODO: Update assumptions below, now that force and normals
             # have been calculated
 
-            # assume force is external potential force
+            # self.force is the external potential force - Eq (7)
             fx = self.bilinear_interpolate(self.force[:, :, 0], X, Y)
             fy = self.bilinear_interpolate(self.force[:, :, 1], X, Y)
 
-            # assume intensity is inflation force
+            # self.intensity is the inflation force - Eq (5)
             pxy = self.bilinear_interpolate(self.intensity, X, Y)
             # Get component of intensity on x and y directions
             px = pxy * (norms[:, 0]).reshape(-1, 1)
@@ -380,11 +363,13 @@ class TSnake(object):
 
             # Update nodes
             temp = solve_triangular(
-                L, X + (self.dt/self.gamma)*(fx + px), lower=True)
+                L, X + (self.dt/self.gamma)*(fx + px), lower=True
+            )
             X = solve_triangular(np.transpose(L), temp, lower=False)
 
             temp = solve_triangular(
-                L, Y + (self.dt/self.gamma)*(fy + py), lower=True)
+                L, Y + (self.dt/self.gamma)*(fy + py), lower=True
+            )
             Y = solve_triangular(np.transpose(L), temp, lower=False)
 
             # make sure X and Y are within image
