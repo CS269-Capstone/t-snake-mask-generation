@@ -302,7 +302,8 @@ class MaskedRegion(object):
                 [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], 
                 dtype=np.float32
             )
-            norms = norms.reshape(-1,2)
+            # multiply outward normals s they're easier to see
+            norms = norms.reshape(-1,2) * 6
 
             norms += nodes
             # How many terminal and initial nodes to show in different colors
@@ -331,6 +332,48 @@ class MaskedRegion(object):
                 )
         
         plt.tight_layout()
+        plt.show()
+    
+    def show_snake(self, figsize=(8, 8)):
+        """
+        Shows the current T-snake overlaid onto the (grayscale) image.
+        """
+        image = self.raw_image_portion
+        if self._initial_tsnake is None:
+            raise ValueError('T-snake has not been initialized.')
+        
+        snake = self._initial_tsnake
+        # positions of the snake nodes
+        nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
+        nodes = np.array(nodes).reshape(len(nodes), 2)
+        # outward normals for each node
+        norms = np.array(
+            [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], 
+            dtype=np.float32
+        )
+        # multiply outward normals so they're easier to see
+        norms = norms.reshape(-1,2) * 6
+        norms += nodes
+        
+        f, ax = plt.subplots(figsize=figsize)
+        ax.imshow(image, cmap=plt.cm.binary)
+        
+        # Plot nodes
+        ax.scatter(nodes[:, 0], nodes[:, 1], c='red', s=3)
+        # Plot endpoints of the outward normals
+        ax.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
+        
+        for i in range(len(nodes)):
+            # Plot the elements
+            ax.plot(
+                nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+            )
+            # Normals are plotted in green
+            ax.plot(
+                [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', 
+                lw=2, alpha=0.5
+            )
+        
         plt.show()
     
     def initialize_tsnake(
@@ -401,7 +444,6 @@ class MaskedRegion(object):
         
         # Order the nodes so that they connect to closest nodes
         ordered_nodes = self.order_snake_nodes(edge_pixels)
-#         ordered_nodes = edge_pixels
         
         # Pull out every step-th pixel for initializion as a Node
         nodes = []

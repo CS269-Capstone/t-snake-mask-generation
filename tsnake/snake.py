@@ -139,7 +139,7 @@ class TSnake(object):
         expects elements to be initialized counter clockwise for 
         any closed contour
         =====================================================
-        Return:
+        Returns:
         =====================================================
         None, stores the normal to each element and node as a 
         numpy array of dimension (2,), i.e. [x y]
@@ -149,10 +149,11 @@ class TSnake(object):
         for i in range(len(self._elements)):
             first_element = self._elements[i]
             # Perpendicular of current element, normalized
-            norm = first_element.get_perpendicular()
+            norm = first_element.get_perpendicular().reshape(2, )
             norm /= np.sum(np.abs(norm))
             p1, p2 = first_element.endpoints
             pnx, pny = None, None  # previous normal for x and y
+            
             if i == 0:
                 for j in range(len(self._elements)):
                     # We don't care about the normal's
@@ -163,10 +164,14 @@ class TSnake(object):
                     element = self._elements[j]
                     e1, e2 = element.endpoints
                     res = seg_intersect(
-                        e1.position, e2.position, p1.position, p1.position + norm)
+                        e1.position, e2.position, 
+                        p1.position, p1.position + norm
+                    )
+                    
                     # If they don't intersect at all, continue
                     if res is None:
                         continue
+                        
                     # If they do intersect, make sure it isn't
                     # at a node on this edge
                     if not np.all(res == p1.position):
@@ -185,7 +190,7 @@ class TSnake(object):
                 element = self._elements[i]
 
                 # Perpendicular of current element, normalized
-                norm = element.get_perpendicular()
+                norm = element.get_perpendicular().reshape(2, )
                 norm /= np.sum(np.abs(norm))
                 nx, ny = np.sign(norm)
 
@@ -200,7 +205,8 @@ class TSnake(object):
                 p1, p2 = element.endpoints
                 res = seg_intersect(
                     p1.position, p1.position + old_norm,
-                    p2.position, p2.position + norm)
+                    p2.position, p2.position + norm
+                )
                 # If they don't intersect at all, continue
                 if res is None:
                     if (pnx * nx) < 0 and (pny * ny) < 0:
@@ -379,10 +385,14 @@ class TSnake(object):
             # make sure X and Y are within image
             X = np.clip(X, 0, self.force.shape[0]-1)
             Y = np.clip(Y, 0, self.force.shape[1]-1)
+            
+            self._compute_normals()
 
         # save new nodes
         for i in range(self.num_nodes):
             self.nodes[i].update(X[i], Y[i])
+            
+        
 
     @classmethod
     def merge(cls, snake1, snake2):

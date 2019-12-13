@@ -96,7 +96,7 @@ def seg_intersect(a1, a2, b1, b2, decimal=3):
     * decimal: int (optional): Number of decimals to round to, default is 3
     return:
     * (1,2) np array denoting [x, y] coordinates of intersection
-    """
+    """  
     s = np.vstack([a1, a2, b1, b2])        # s for stacked
     h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
     l1 = np.cross(h[0], h[1])           # get first line
