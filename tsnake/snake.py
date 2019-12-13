@@ -128,7 +128,14 @@ class TSnake(object):
         self._elements.append(Element(self.nodes[-1], self.nodes[0]))
         self._compute_normals()
 
-
+    def _remove_empty_elements(self):
+        new_elements = []
+        for element in self._elements:
+            p1, p2 = element.endpoints
+            if p1 != p2:
+                new_elements.append(element)
+        del self._elements
+        self._elements = new_elements
 
     def _compute_normals(self):
         """
@@ -147,103 +154,106 @@ class TSnake(object):
         numpy array of dimension (2,), i.e. [x y]
         =====================================================
         """
-        new_elements = []
+        self._remove_empty_elements()
+
         for i in range(len(self._elements)):
             first_element = self._elements[i]
             p1, p2 = first_element.endpoints
 
-            # This element may have collapsed on itself, if so remove it
-            if p1 != p2:
-                new_elements.append(first_element)
-            else:
-                continue
-            
             # Perpendicular of current element, normalized
-            norm = first_element.get_perpendicular().reshape(2, )
+            norm = first_element.get_perpendicular().reshape(2,)
             norm /= np.sum(np.abs(norm))
-            
 
-            if len(new_elements) == 1:
-                for j in range(len(self._elements)):
-                    # We don't care about the normal's
-                    # intersection with the edge it
-                    # originates from
-                    if j == i:
-                        continue
-                    element = self._elements[j]
-                    e1, e2 = element.endpoints
-                    res = seg_intersect(
-                        e1.position, e2.position,
-                        p1.position, p1.position + norm
-                    )
+            ### START OF NOTE ###
+            # This code adds complexity but doesn't work
+            # all of the time, it seems like the most important
+            # piece is that the nodes are processed counter-clockwise
+            # TODO@ERIC: If you find that this works as is, remove this block
+            ### END OF NOTE ###
 
-                    # If they don't intersect at all, continue
-                    if res[0, 0] == float('inf'):
-                        continue
+            # if i == 0:
+            #     # j = 1 because We don't care about the normal's
+            #     # intersection with the edge it originates from
+            #     for j in range(1, len(self._elements)):
 
-                    # If they do intersect, make sure it isn't
-                    # at a node on this edge
-                    if not np.all(res == p1.position):
-                        delta = res - p1.position
-                        delta = np.sign(delta)
-                        x, y = delta[0, 0], delta[0, 1]
-                        nx, ny = np.sign(norm)
-                        pnx, pny = nx, ny
-                        # If the ray from p1 to intersection and normal are
-                        # same direction, then normal must be aiming into
-                        # the shape, so flip it
-                        if (x * nx) > 0 and (y * ny) > 0:
-                            norm *= -1
-            elif len(new_elements) > 1:
-                # # The current element
-                # element = self._elements[i]
+            #         element = self._elements[j]
+            #         e1, e2 = element.endpoints
+            #         midpoint = 0.5 * (p1 + p2)
+            #         midpoint = midpoint.reshape(-1)
 
-                # # Perpendicular of current element, normalized
-                # norm = element.get_perpendicular().reshape(2, )
-                # denom = np.sum(np.abs(norm))
-                # if denom == 0:
-                #     print("0 Denom @ element {}".format(element))
-                # norm /= np.sum(np.abs(norm))
-                nx, ny = np.sign(norm)
+            #         res = seg_intersect(
+            #             e1.position, e2.position,
+            #             midpoint,
+            #             midpoint + norm
+            #         )
 
-                # Previous normal (x and y components)
-                prev = new_elements[-2]
-                old_norm = prev.normal
-                pnx, pny = np.sign(old_norm)
+            #         # If they don't intersect at all, continue
+            #         if res[0, 0] == float('inf'):
+            #             continue
 
-                # * If the two normals intersect, make sure the new
-                # one is pointing away from the intersection
-                # * If they do not, make sure the new one points in
-                # the same direction as the old one
-                p1, p2 = first_element.endpoints
-                res = seg_intersect(
-                    p1.position, p1.position + old_norm,
-                    p2.position, p2.position + norm
-                )
-                # If they don't intersect at all, continue
-                if res[0, 0] == float('inf'):
-                    if (pnx * nx) < 0 and (pny * ny) < 0:
-                        norm *= -1
-                else:
-                    delta = res - p2.position
-                    delta = np.sign(delta)
-                    x, y = delta[0, 0], delta[0, 1]
+            #         direction = res - midpoint
+            #         x, y = np.sign(direction.reshape(-1))
+            #         nx, ny = np.sign(norm)
+            #         # If the ray from p1 to intersection and normal are
+            #         # same direction, then normal must be aiming into
+            #         # the shape, so flip it
+            #         if x == nx and y == ny:
+            #             norm *= -1
+            #         break
+            # else:
+            #     nx, ny = np.sign(norm)
 
-                    # If the ray from p2 to intersection and normal are
-                    # same direction, then normal must be aiming into
-                    # the shape, so flip it
-                    if (x * nx) > 0 and (y * ny) > 0:
-                        norm *= -1
-            # print('NORM FOR ELEMENT %d: %s' % (i, norm))
-            new_elements[-1].set_normal(norm)
+            #     # Previous normal (x and y components)
+            #     prev = self._elements[i-1]
+            #     e1, e2 = prev.endpoints
+            #     old_norm = prev.normal
+            #     pnx, pny = np.sign(old_norm)
 
-        # Now we find the normals for each node, which
-        # are the average of the normals of the two adjacent elements
-        for i in range(len(new_elements)):
-            prev = new_elements[i-1]
-            current = new_elements[i]
-            self.nodes[i].set_normal(0.5 * (prev.normal + current.normal))
-        self._elements = new_elements
+            #     new_mid = (0.5 * (p1 + p2)).reshape(-1)
+            #     old_mid = (0.5 * (e1 + e2)).reshape(-1)
+
+            #     # * If the two normals intersect, make sure the new
+            #     # one is pointing away from the intersection
+            #     # * If they do not, make sure the new one points in
+            #     # the same direction as the old one
+            #     res = seg_intersect(
+            #         old_mid, old_mid + old_norm,
+            #         new_mid, new_mid + norm
+            #     )
+
+            #     # If they don't intersect at all, continue
+            #     if res[0, 0] == float('inf'):
+            #         norm = old_norm
+            #     else:
+            #         direction1 = res - old_mid
+            #         direction2 = res - new_mid
+            #         x1, y1 = np.sign(direction1.reshape(-1))
+            #         x2, y2 = np.sign(direction2.reshape(-1))
+
+            #         # Is the intersection inside or outside?
+            #         intersect_outside = x1 == pnx and y1 == pny
+
+            #         if intersect_outside:
+            #             # Are new norm and intersect in same direction?
+            #             if x2 != nx and y2 != ny:
+            #                 norm *= -1
+            #         else:
+            #             if x2 == nx and y2 == ny:
+            #                 norm *= -1
+
+            first_element.set_normal(norm)
+            # Now we find the normals for each node, which
+            # are the average of the normals of the two adjacent elements
+            if i > 0:
+                prev = self._elements[i-1]
+                current = self._elements[i]
+                self.nodes[i].set_normal(0.5 * (prev.normal + current.normal))
+
+        # Do the normal of the first node now that the final element
+        # has a normal vector too
+        prev = self._elements[-1]
+        current = self._elements[0]
+        self.nodes[0].set_normal(0.5 * (prev.normal + current.normal))
 
     @property
     def elements(self):
