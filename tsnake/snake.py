@@ -104,8 +104,12 @@ class TSnake(object):
             assert isinstance(n, Node)
         self.nodes = list(nodes)
         
-        # Force and intensity fields over the image, (n,m) np arrays
+        # force: (n, m, 2) array of Eq (7) at each pixel (x, y)
         self.force = force
+        
+        # NOTE: this being called 'intensity' is confusing - it's
+        #       actually the inflationary force
+        # intensity: (n, m) array of Eq (5) at each pixel (x, y)
         self.intensity = intensity
         
         # Deformation parameters

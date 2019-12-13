@@ -14,7 +14,7 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     Args:
     ========================
     (np.array) image:
-    * A np.array of shape (m, n) containing the grayscale image. 
+    * A np.array of shape (n, m) containing the grayscale image. 
     
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
@@ -23,7 +23,7 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     Returns:
     ========================
     (np.array) inflation forces (+1 or -1): 
-    * (m, n) array of of intensities (values of 0 to 255)
+    * (n, m) array of of intensities (values of 0 to 255)
     ========================
     """
     image_intensity = image

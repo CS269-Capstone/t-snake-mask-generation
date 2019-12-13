@@ -319,7 +319,7 @@ class MaskedRegion(object):
             )
             ax4.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
 
-            for i in range(len(nodes)-1):
+            for i in range(len(nodes)):
                 # Elements are plotted in red 
                 ax4.plot(
                     nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
@@ -437,7 +437,7 @@ class MaskedRegion(object):
         node_locs = node_locs[1:]
         
         ordered_nodes = [loc]
-        while len(ordered_nodes) < num_nodes:
+        while len(ordered_nodes) < (num_nodes-1):
             # Find the node which is closest to the last node we processed
             last = ordered_nodes[-1].reshape(1, 2)
             # dists = distance from each remaining node to current node
@@ -446,6 +446,8 @@ class MaskedRegion(object):
             closest = dists.argmin()
             ordered_nodes.append(node_locs[closest])
             node_locs = np.delete(node_locs, obj=closest, axis=0)
+            
+        
         
         return ordered_nodes
     
@@ -507,19 +509,22 @@ class MaskedRegion(object):
         # check this pixel is masked
         if not self.raw_mask_portion[r, c] == 1:
             return False
-        
-        neighbors = []
+            
         for r1 in range(r-1, r+2):
             for c1 in range(c-1, c+2):
                 if (r == r1) and (c == c1):
                     continue
+                    
+                # If either r1 or c1 is negative, then (r, c) is an edge pixel
+                if (r1 < 0) or (c1 < 0):
+                    return True
                     
                 try:
                     if self.raw_mask_portion[r1, c1] == 0:
                         return True
                 except IndexError:  # if IndexError, then this pixel is on the edge
                     return True
-
+        
         return False
 
 # =====================================================
