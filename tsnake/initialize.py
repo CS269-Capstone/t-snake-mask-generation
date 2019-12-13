@@ -334,7 +334,7 @@ class MaskedRegion(object):
         plt.tight_layout()
         plt.show()
     
-    def show_snake(self, figsize=(8, 8)):
+    def show_snake(self, save_fig='', figsize=(8, 8)):
         """
         Shows the current T-snake overlaid onto the (grayscale) image.
         """
@@ -373,11 +373,13 @@ class MaskedRegion(object):
                 [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', 
                 lw=2, alpha=0.5
             )
-        
-        plt.show()
-    
+        if save_fig == '':
+            plt.show()
+        else:
+            plt.savefig(save_fig)
+            plt.clf()
     def initialize_tsnake(
-        self, N, p, c, sigma, a, b, gamma, dt, verbose=False
+        self, N, p, c, sigma, a, b, gamma, dt, threshold=100, verbose=False
     ):
         """
         Initializes a T-snake by placing the initial nodes along 
@@ -460,7 +462,7 @@ class MaskedRegion(object):
         # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
         
-        intensity_grid = img_inflation_force(self.raw_image_portion, 100)
+        intensity_grid = img_inflation_force(self.raw_image_portion, threshold)
         
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, gamma, dt

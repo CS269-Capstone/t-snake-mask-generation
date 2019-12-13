@@ -103,15 +103,15 @@ class TSnake(object):
         for n in nodes:
             assert isinstance(n, Node)
         self.nodes = list(nodes)
-        
+
         # force: (n, m, 2) array of Eq (7) at each pixel (x, y)
         self.force = force
-        
+
         # NOTE: this being called 'intensity' is confusing - it's
         #       actually the inflationary force
         # intensity: (n, m) array of Eq (5) at each pixel (x, y)
         self.intensity = intensity
-        
+
         # Deformation parameters
         self.a = a
         self.b = b
@@ -128,11 +128,13 @@ class TSnake(object):
         self._elements.append(Element(self.nodes[-1], self.nodes[0]))
         self._compute_normals()
 
+
+
     def _compute_normals(self):
         """
         Compute normals for each element and node, the computation is O(n) 
         in the number of edges.
-        
+
         Args:
         =====================================================
         None, uses the initialized snake elements and nodes, but
@@ -145,17 +147,23 @@ class TSnake(object):
         numpy array of dimension (2,), i.e. [x y]
         =====================================================
         """
-
+        new_elements = []
         for i in range(len(self._elements)):
             first_element = self._elements[i]
+            p1, p2 = first_element.endpoints
+
+            # This element may have collapsed on itself, if so remove it
+            if p1 != p2:
+                new_elements.append(first_element)
+            else:
+                continue
+            
             # Perpendicular of current element, normalized
             norm = first_element.get_perpendicular().reshape(2, )
-            print('NORM FOR ELEMENT %d: %s' % (i, norm))
             norm /= np.sum(np.abs(norm))
-            p1, p2 = first_element.endpoints
-            pnx, pny = None, None  # previous normal for x and y
             
-            if i == 0:
+
+            if len(new_elements) == 1:
                 for j in range(len(self._elements)):
                     # We don't care about the normal's
                     # intersection with the edge it
@@ -165,14 +173,14 @@ class TSnake(object):
                     element = self._elements[j]
                     e1, e2 = element.endpoints
                     res = seg_intersect(
-                        e1.position, e2.position, 
+                        e1.position, e2.position,
                         p1.position, p1.position + norm
                     )
-                    
+
                     # If they don't intersect at all, continue
-                    if res is None:
+                    if res[0, 0] == float('inf'):
                         continue
-                        
+
                     # If they do intersect, make sure it isn't
                     # at a node on this edge
                     if not np.all(res == p1.position):
@@ -186,30 +194,34 @@ class TSnake(object):
                         # the shape, so flip it
                         if (x * nx) > 0 and (y * ny) > 0:
                             norm *= -1
-            else:
-                # The current element
-                element = self._elements[i]
+            elif len(new_elements) > 1:
+                # # The current element
+                # element = self._elements[i]
 
-                # Perpendicular of current element, normalized
-                norm = element.get_perpendicular().reshape(2, )
-                norm /= np.sum(np.abs(norm))
+                # # Perpendicular of current element, normalized
+                # norm = element.get_perpendicular().reshape(2, )
+                # denom = np.sum(np.abs(norm))
+                # if denom == 0:
+                #     print("0 Denom @ element {}".format(element))
+                # norm /= np.sum(np.abs(norm))
                 nx, ny = np.sign(norm)
 
                 # Previous normal (x and y components)
-                old_norm = self._elements[i-1].normal
+                prev = new_elements[-2]
+                old_norm = prev.normal
                 pnx, pny = np.sign(old_norm)
 
                 # * If the two normals intersect, make sure the new
                 # one is pointing away from the intersection
                 # * If they do not, make sure the new one points in
                 # the same direction as the old one
-                p1, p2 = element.endpoints
+                p1, p2 = first_element.endpoints
                 res = seg_intersect(
                     p1.position, p1.position + old_norm,
                     p2.position, p2.position + norm
                 )
                 # If they don't intersect at all, continue
-                if res is None:
+                if res[0, 0] == float('inf'):
                     if (pnx * nx) < 0 and (pny * ny) < 0:
                         norm *= -1
                 else:
@@ -222,14 +234,16 @@ class TSnake(object):
                     # the shape, so flip it
                     if (x * nx) > 0 and (y * ny) > 0:
                         norm *= -1
-            self._elements[i].set_normal(norm)
+            # print('NORM FOR ELEMENT %d: %s' % (i, norm))
+            new_elements[-1].set_normal(norm)
 
         # Now we find the normals for each node, which
         # are the average of the normals of the two adjacent elements
-        for i in range(len(self._elements)):
-            prev = self._elements[i-1]
-            current = self._elements[i]
+        for i in range(len(new_elements)):
+            prev = new_elements[i-1]
+            current = new_elements[i]
             self.nodes[i].set_normal(0.5 * (prev.normal + current.normal))
+        self._elements = new_elements
 
     @property
     def elements(self):
@@ -285,7 +299,7 @@ class TSnake(object):
         Computes bilinearly interpolated values for points (x,y) from image im.
         Follows (and modified) from Alex Flint's code: 
         https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
-        
+
         Args:
         ===========================================
         (2D numpy array) im: 
@@ -386,14 +400,12 @@ class TSnake(object):
             # make sure X and Y are within image
             X = np.clip(X, 0, self.force.shape[0]-1)
             Y = np.clip(Y, 0, self.force.shape[1]-1)
-            
+
             self._compute_normals()
 
         # save new nodes
         for i in range(self.num_nodes):
             self.nodes[i].update(X[i], Y[i])
-            
-        
 
     @classmethod
     def merge(cls, snake1, snake2):

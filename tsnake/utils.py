@@ -6,20 +6,21 @@ Module containing utilities and base
 classes to be shared by Snake and Grid
 """
 
+
 def img_inflation_force(image: np.array, threshold: int) -> np.array:
     """
     Compute the inflationary force F(I(x, y)), equation (5) from the paper, for 
     every integer-index (x, y) of the image.
-    
+
     Args:
     ========================
     (np.array) image:
     * A np.array of shape (n, m) containing the grayscale image. 
-    
+
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
     ========================
-    
+
     Returns:
     ========================
     (np.array) inflation forces (+1 or -1): 
@@ -37,7 +38,7 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     """
     Computes an array of force values for the given image.
     Equation (7) in the paper.
-    
+
     Args:
     ============================================
     (float) sigma: 
@@ -96,7 +97,7 @@ def seg_intersect(a1, a2, b1, b2, decimal=3):
     * decimal: int (optional): Number of decimals to round to, default is 3
     return:
     * (1,2) np array denoting [x, y] coordinates of intersection
-    """  
+    """
     s = np.vstack([a1, a2, b1, b2])        # s for stacked
     h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
     l1 = np.cross(h[0], h[1])           # get first line
@@ -126,11 +127,11 @@ class UtilPoint(object):
     @property
     def position(self):
         return np.array([self._x, self._y]).reshape(1, 2)
-    
+
     @property
     def x(self):
         return self._x
-    
+
     @property
     def y(self):
         return self._y
@@ -180,6 +181,7 @@ class UtilEdge(object):
         ==========================================
         """
         # pts = sorted([point1, point2])
+        assert point1 != point2, "Cannon initialize edge between the same point {}".format(point1)
         self._point1 = point1  # todo maybe argchecks
         self._point2 = point2
 
@@ -208,16 +210,3 @@ class UtilEdge(object):
         pts1 = sorted(self.endpoints)
         pts2 = sorted(other.endpoints)
         return np.all(pts1 == pts2)
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
