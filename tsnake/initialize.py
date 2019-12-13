@@ -401,6 +401,7 @@ class MaskedRegion(object):
         
         # Order the nodes so that they connect to closest nodes
         ordered_nodes = self.order_snake_nodes(edge_pixels)
+#         ordered_nodes = edge_pixels
         
         # Pull out every step-th pixel for initializion as a Node
         nodes = []
@@ -437,7 +438,7 @@ class MaskedRegion(object):
         node_locs = node_locs[1:]
         
         ordered_nodes = [loc]
-        while len(ordered_nodes) < (num_nodes-1):
+        while len(ordered_nodes) < num_nodes:
             # Find the node which is closest to the last node we processed
             last = ordered_nodes[-1].reshape(1, 2)
             # dists = distance from each remaining node to current node
@@ -447,8 +448,6 @@ class MaskedRegion(object):
             ordered_nodes.append(node_locs[closest])
             node_locs = np.delete(node_locs, obj=closest, axis=0)
             
-        
-        
         return ordered_nodes
     
     def compute_force_grid(self, sigma, c, p):
