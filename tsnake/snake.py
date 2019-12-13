@@ -150,6 +150,7 @@ class TSnake(object):
             first_element = self._elements[i]
             # Perpendicular of current element, normalized
             norm = first_element.get_perpendicular().reshape(2, )
+            print('NORM FOR ELEMENT %d: %s' % (i, norm))
             norm /= np.sum(np.abs(norm))
             p1, p2 = first_element.endpoints
             pnx, pny = None, None  # previous normal for x and y
