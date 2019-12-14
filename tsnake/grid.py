@@ -150,11 +150,17 @@ class Grid(object):
     def _store_edge(self, p1: Point, p2: Point) -> None:
         """
         Store the edge between Points p1 and p2 in both p1 and p2,
-        unless the edge already exists, then that edge is used
-        args:
+        unless the edge already exists, then that edge is used.
+        
+        Args:
+        ==========================================
         * Point: p1, p2: two points to store edge between
-        return:
+        ==========================================
+        
+        Returns:
+        ==========================================
         * None
+        ==========================================
         """
         edge = GridCellEdge(p1, p2)
         if edge in self.edges:
@@ -218,18 +224,19 @@ class Grid(object):
         ============================================
         """
         if self.image_force is None:
-            self.image_force = img_force(self.image,sigma, c, p)
+            self.image_force = img_force(self.image, sigma, c, p)
         return self.image_force
 
     def get_inflation_force(self, threshold):
         """
-        Compute F(I(img)), equation (5) from the paper, for inflation force
+        Compute F(I(img)), equation (5) from the paper, for inflation force.
+        
         Args:
         ========================
         (int) threshold:
         * Threshold value, intensities above this result in 1, else -1, from equation (5)
         ========================
-        Return:
+        Returns:
         ========================
         (np.array) inflation forces (+1 or -1): 
         * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
@@ -266,10 +273,17 @@ class Grid(object):
         """
         get all edges bounded by the box with the index
         position as it's top-left corner
-        args:
+        
+        Args:
+        ==========================================
         * index: np array (1,2) of index of bounding box's top-left corner
-        returns:
-        * edges: set() of all edges bounded by this box, i.e., potential intersection points
+        ==========================================
+        
+        Returns:
+        ==========================================
+        * edges: set() of all edges bounded by this box, 
+                 i.e., potential intersection points
+        ==========================================
         """
         edges = set()
         for dx in [0, 1]:
@@ -370,3 +384,8 @@ class Grid(object):
 
 if __name__ == '__main__':
     pass
+
+
+
+
+

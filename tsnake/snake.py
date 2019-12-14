@@ -95,7 +95,6 @@ class TSnake(object):
     * A list of Node instances, in order i=0, 1, 2, ..., N-1
     ===========================================
 
-    TODO: hyperparameters in constructor
     TODO: calculate intensity normal thingy
     TODO: comments for a,b, gamma
     """
@@ -104,9 +103,15 @@ class TSnake(object):
         for n in nodes:
             assert isinstance(n, Node)
         self.nodes = list(nodes)
-        # Force and intensity fields over the image, (n,m) np arrays
+        
+        # force: (n, m, 2) array of Eq (7) at each pixel (x, y)
         self.force = force
+        
+        # NOTE: this being called 'intensity' is confusing - it's
+        #       actually the inflationary force
+        # intensity: (n, m) array of Eq (5) at each pixel (x, y)
         self.intensity = intensity
+        
         # Deformation parameters
         self.a = a
         self.b = b
@@ -125,14 +130,16 @@ class TSnake(object):
 
     def _compute_normals(self):
         """
-        Compute normals for each element and node, the computation is O(n) in the number of edges
+        Compute normals for each element and node, the computation is O(n) 
+        in the number of edges.
+        
         Args:
         =====================================================
         None, uses the initialized snake elements and nodes, but
         expects elements to be initialized counter clockwise for 
         any closed contour
         =====================================================
-        Return:
+        Returns:
         =====================================================
         None, stores the normal to each element and node as a 
         numpy array of dimension (2,), i.e. [x y]
@@ -142,10 +149,12 @@ class TSnake(object):
         for i in range(len(self._elements)):
             first_element = self._elements[i]
             # Perpendicular of current element, normalized
-            norm = first_element.get_perpendicular()
+            norm = first_element.get_perpendicular().reshape(2, )
+            print('NORM FOR ELEMENT %d: %s' % (i, norm))
             norm /= np.sum(np.abs(norm))
             p1, p2 = first_element.endpoints
             pnx, pny = None, None  # previous normal for x and y
+            
             if i == 0:
                 for j in range(len(self._elements)):
                     # We don't care about the normal's
@@ -156,10 +165,14 @@ class TSnake(object):
                     element = self._elements[j]
                     e1, e2 = element.endpoints
                     res = seg_intersect(
-                        e1.position, e2.position, p1.position, p1.position + norm)
+                        e1.position, e2.position, 
+                        p1.position, p1.position + norm
+                    )
+                    
                     # If they don't intersect at all, continue
                     if res is None:
                         continue
+                        
                     # If they do intersect, make sure it isn't
                     # at a node on this edge
                     if not np.all(res == p1.position):
@@ -178,7 +191,7 @@ class TSnake(object):
                 element = self._elements[i]
 
                 # Perpendicular of current element, normalized
-                norm = element.get_perpendicular()
+                norm = element.get_perpendicular().reshape(2, )
                 norm /= np.sum(np.abs(norm))
                 nx, ny = np.sign(norm)
 
@@ -193,7 +206,8 @@ class TSnake(object):
                 p1, p2 = element.endpoints
                 res = seg_intersect(
                     p1.position, p1.position + old_norm,
-                    p2.position, p2.position + norm)
+                    p2.position, p2.position + norm
+                )
                 # If they don't intersect at all, continue
                 if res is None:
                     if (pnx * nx) < 0 and (pny * ny) < 0:
@@ -228,35 +242,12 @@ class TSnake(object):
     @property
     def node_locations(self):
         """
-        # TODO: Store or compute normals somewhere
         Returns an (N, 2) matrix containing the current node locations for this T-snake.
         ( In the paper: $\bm{x}(t)$ )
         """
         N = self.num_nodes
         locs = [node.position for node in self.nodes]
         return np.array(locs).reshape(N, 2)
-
-    def compute_alpha(self):
-        """ Eq 2 """
-        raise NotImplementedError
-
-    def compute_beta(self):
-        """ Eq 3 """
-        raise NotImplementedError
-
-    def compute_rho(self):
-        """ Eq 4 """
-        raise NotImplementedError
-
-    def compute_f(self):
-        """ Eq 7 """
-        raise NotImplementedError
-
-    def compute_potential(self):
-        """
-        P(
-        """
-        raise NotImplementedError
 
     def compute_matrix(self):
         """
@@ -294,6 +285,7 @@ class TSnake(object):
         Computes bilinearly interpolated values for points (x,y) from image im.
         Follows (and modified) from Alex Flint's code: 
         https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
+        
         Args:
         ===========================================
         (2D numpy array) im: 
@@ -312,6 +304,8 @@ class TSnake(object):
         y0 = np.floor(y).astype(int)
 
         # make sure the coordinates are within the image
+        # @cole: will a correct implementation ever call this function on coords
+        #        outside of the image? shouldn't we throw an error if this happens?
         x0 = np.clip(x0, 0, im.shape[0]-1)
         y0 = np.clip(y0, 0, im.shape[1]-1)
 
@@ -368,11 +362,11 @@ class TSnake(object):
             # TODO: Update assumptions below, now that force and normals
             # have been calculated
 
-            # assume force is external potential force
+            # self.force is the external potential force - Eq (7)
             fx = self.bilinear_interpolate(self.force[:, :, 0], X, Y)
             fy = self.bilinear_interpolate(self.force[:, :, 1], X, Y)
 
-            # assume intensity is inflation force
+            # self.intensity is the inflation force - Eq (5)
             pxy = self.bilinear_interpolate(self.intensity, X, Y)
             # Get component of intensity on x and y directions
             px = pxy * (norms[:, 0]).reshape(-1, 1)
@@ -380,20 +374,26 @@ class TSnake(object):
 
             # Update nodes
             temp = solve_triangular(
-                L, X + (self.dt/self.gamma)*(fx + px), lower=True)
+                L, X + (self.dt/self.gamma)*(fx + px), lower=True
+            )
             X = solve_triangular(np.transpose(L), temp, lower=False)
 
             temp = solve_triangular(
-                L, Y + (self.dt/self.gamma)*(fy + py), lower=True)
+                L, Y + (self.dt/self.gamma)*(fy + py), lower=True
+            )
             Y = solve_triangular(np.transpose(L), temp, lower=False)
 
             # make sure X and Y are within image
             X = np.clip(X, 0, self.force.shape[0]-1)
             Y = np.clip(Y, 0, self.force.shape[1]-1)
+            
+            self._compute_normals()
 
         # save new nodes
         for i in range(self.num_nodes):
             self.nodes[i].update(X[i], Y[i])
+            
+        
 
     @classmethod
     def merge(cls, snake1, snake2):

@@ -274,8 +274,8 @@ class MaskedRegion(object):
     def __repr__(self):
         return self.__str__()
     
-    def visualize(self):
-        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    def visualize(self, figsize=(20, 20)):
+        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
         ax1.set_title('raw input mask')
         ax2.set_title('corresp. rect. mask-region')
         ax3.set_title('grayscale image portion')
@@ -298,24 +298,82 @@ class MaskedRegion(object):
             nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
             nodes = np.array(nodes).reshape(len(nodes), 2)
 
-            norms = np.array([[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], dtype=np.float32)
-            norms = norms.reshape(-1,2)
+            norms = np.array(
+                [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], 
+                dtype=np.float32
+            )
+            # multiply outward normals s they're easier to see
+            norms = norms.reshape(-1,2) * 6
 
             norms += nodes
             # How many terminal and initial nodes to show in different colors
             buffer = 5
-            ax4.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', s=3, alpha=0.5)
+            ax4.scatter(
+                nodes[buffer:-buffer, 0], nodes[buffer:-buffer:, 1], c='red', 
+                s=3, alpha=0.5
+            )
             
             # Visualize normals, and initial nodes (white), terminal nodes (yellow)
             ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='white', s=3, alpha=0.9)
-            ax4.scatter(nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9)
+            ax4.scatter(
+                nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9
+            )
             ax4.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
 
-            for i in range(len(nodes)-1):
-                ax4.plot(nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5)
-                ax4.plot([nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', lw=1, alpha=0.5)
+            for i in range(len(nodes)):
+                # Elements are plotted in red 
+                ax4.plot(
+                    nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+                )
+                # Normals are plotted in green
+                ax4.plot(
+                    [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', 
+                    lw=1, alpha=0.5
+                )
         
         plt.tight_layout()
+        plt.show()
+    
+    def show_snake(self, figsize=(8, 8)):
+        """
+        Shows the current T-snake overlaid onto the (grayscale) image.
+        """
+        image = self.raw_image_portion
+        if self._initial_tsnake is None:
+            raise ValueError('T-snake has not been initialized.')
+        
+        snake = self._initial_tsnake
+        # positions of the snake nodes
+        nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
+        nodes = np.array(nodes).reshape(len(nodes), 2)
+        # outward normals for each node
+        norms = np.array(
+            [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes], 
+            dtype=np.float32
+        )
+        # multiply outward normals so they're easier to see
+        norms = norms.reshape(-1,2) * 6
+        norms += nodes
+        
+        f, ax = plt.subplots(figsize=figsize)
+        ax.imshow(image, cmap=plt.cm.binary)
+        
+        # Plot nodes
+        ax.scatter(nodes[:, 0], nodes[:, 1], c='red', s=3)
+        # Plot endpoints of the outward normals
+        ax.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
+        
+        for i in range(len(nodes)):
+            # Plot the elements
+            ax.plot(
+                nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+            )
+            # Normals are plotted in green
+            ax.plot(
+                [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green', 
+                lw=2, alpha=0.5
+            )
+        
         plt.show()
     
     def initialize_tsnake(
@@ -401,7 +459,8 @@ class MaskedRegion(object):
         # do these computations exclusively in the grid? Less 
         # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
-        intensity_grid = img_inflation_force(self.raw_image_portion, 100) # grayscale image
+        
+        intensity_grid = img_inflation_force(self.raw_image_portion, 100)
         
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, gamma, dt
@@ -430,7 +489,7 @@ class MaskedRegion(object):
             closest = dists.argmin()
             ordered_nodes.append(node_locs[closest])
             node_locs = np.delete(node_locs, obj=closest, axis=0)
-        
+            
         return ordered_nodes
     
     def compute_force_grid(self, sigma, c, p):
@@ -456,7 +515,7 @@ class MaskedRegion(object):
         Equation (7) at each pixel in the image.
         ============================================
         """
-        out = img_force(self.raw_image_portion,sigma, c, p)
+        out = img_force(self.raw_image_portion, sigma, c, p)
         return out
     
     def _find_edge_pixels(self):
@@ -491,19 +550,22 @@ class MaskedRegion(object):
         # check this pixel is masked
         if not self.raw_mask_portion[r, c] == 1:
             return False
-        
-        neighbors = []
+            
         for r1 in range(r-1, r+2):
             for c1 in range(c-1, c+2):
                 if (r == r1) and (c == c1):
                     continue
+                    
+                # If either r1 or c1 is negative, then (r, c) is an edge pixel
+                if (r1 < 0) or (c1 < 0):
+                    return True
                     
                 try:
                     if self.raw_mask_portion[r1, c1] == 0:
                         return True
                 except IndexError:  # if IndexError, then this pixel is on the edge
                     return True
-
+        
         return False
 
 # =====================================================

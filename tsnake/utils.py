@@ -6,19 +6,24 @@ Module containing utilities and base
 classes to be shared by Snake and Grid
 """
 
-def img_inflation_force(
-    image: np.array, threshold: int) -> np.array:
+def img_inflation_force(image: np.array, threshold: int) -> np.array:
     """
-    Compute F(I(img)), equation (5) from the paper, for inflation force
+    Compute the inflationary force F(I(x, y)), equation (5) from the paper, for 
+    every integer-index (x, y) of the image.
+    
     Args:
     ========================
+    (np.array) image:
+    * A np.array of shape (n, m) containing the grayscale image. 
+    
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
     ========================
-    Return:
+    
+    Returns:
     ========================
     (np.array) inflation forces (+1 or -1): 
-    * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
+    * (n, m) array of of intensities (values of 0 to 255)
     ========================
     """
     image_intensity = image
@@ -28,9 +33,11 @@ def img_inflation_force(
     return image_intensity
 
 
-def img_force(image: np.array, sigma: int, c: int, p: int) -> np.array:
+def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     """
-    Compute's force of self.image
+    Computes an array of force values for the given image.
+    Equation (7) in the paper.
+    
     Args:
     ============================================
     (float) sigma: 
@@ -68,6 +75,7 @@ def img_force(image: np.array, sigma: int, c: int, p: int) -> np.array:
     image_force = p * out
     return image_force
 
+
 def dist(a: np.array, b: np.array) -> float:
     """
     Return the distance between a and b
@@ -88,7 +96,7 @@ def seg_intersect(a1, a2, b1, b2, decimal=3):
     * decimal: int (optional): Number of decimals to round to, default is 3
     return:
     * (1,2) np array denoting [x, y] coordinates of intersection
-    """
+    """  
     s = np.vstack([a1, a2, b1, b2])        # s for stacked
     h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
     l1 = np.cross(h[0], h[1])           # get first line
@@ -200,3 +208,16 @@ class UtilEdge(object):
         pts1 = sorted(self.endpoints)
         pts2 = sorted(other.endpoints)
         return np.all(pts1 == pts2)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
