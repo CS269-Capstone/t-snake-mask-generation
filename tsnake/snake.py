@@ -99,7 +99,7 @@ class TSnake(object):
     TODO: comments for a,b, gamma
     """
 
-    def __init__(self, nodes, force, intensity, a, b, gamma, dt):
+    def __init__(self, nodes, force, intensity, a, b, q, gamma, dt):
         for n in nodes:
             assert isinstance(n, Node)
         self.nodes = list(nodes)
@@ -117,6 +117,7 @@ class TSnake(object):
         self.b = b
         self.gamma = gamma
         self.dt = dt
+        self.q = q
 
         self._elements = []
 
@@ -393,8 +394,8 @@ class TSnake(object):
             # self.intensity is the inflation force - Eq (5)
             pxy = self.bilinear_interpolate(self.intensity, X, Y)
             # Get component of intensity on x and y directions
-            px = pxy * (norms[:, 0]).reshape(-1, 1)
-            py = pxy * (norms[:, 1]).reshape(-1, 1)
+            px = pxy * self.q * (norms[:, 0]).reshape(-1, 1)
+            py = pxy * self.q * (norms[:, 1]).reshape(-1, 1)
 
             # Update nodes
             temp = solve_triangular(

@@ -27,10 +27,10 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     * (n, m) array of of intensities (values of 0 to 255)
     ========================
     """
-    image_intensity = image
+    image_intensity = np.copy(image)
     mask = image_intensity < threshold
-    image_intensity[mask] = 1
-    image_intensity[~mask] = -1
+    image_intensity[mask] = -1
+    image_intensity[~mask] = 1
     return image_intensity
 
 
@@ -65,7 +65,7 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     # Compute pixel-wise magnitudes
     mags = np.sqrt(np.square(x_grad) + np.square(y_grad))
     # Multiply by -c
-    mags = mags * -c
+    mags = mags * c
 
     x_grad, y_grad = np.gradient(mags)
     out = np.zeros((x_grad.shape[0], x_grad.shape[1], 2))

@@ -379,7 +379,7 @@ class MaskedRegion(object):
             plt.savefig(save_fig)
             plt.clf()
     def initialize_tsnake(
-        self, N, p, c, sigma, a, b, gamma, dt, threshold=100, verbose=False
+        self, N, p, c, sigma, a, b, q, gamma, dt, threshold=100, verbose=False
     ):
         """
         Initializes a T-snake by placing the initial nodes along 
@@ -407,6 +407,9 @@ class MaskedRegion(object):
         
         (float) b:
         * The hyperparameter b from Equations (1), (8).
+
+        (float) q:
+        * The hyperparameter q from Equations (4).
         
         (float) gamma:
         * The hyperparameter gamma from Equations (1), (8).
@@ -424,6 +427,7 @@ class MaskedRegion(object):
         assert a > 0, 'Hyperparameter a (Eqs 1,8) must be > 0 (got a=%f).' % a
         assert b > 0, 'Hyperparameter b (Eqs 1,8) must be > 0 (got b=%f).' % b
         assert dt > 0, 'Hyperparameter dt (Eq 8) must be > 0 (got dt=%f).' % dt
+        assert q > 0, 'Hyperparameter q (Eq 4) must be > 0 (got q=%f).' % q
         
         msg = 'Hyperparameter sigma (Eq A.4) must be > 0 (got sigma=%f).' % sigma
         assert sigma > 0, msg
@@ -465,7 +469,7 @@ class MaskedRegion(object):
         intensity_grid = img_inflation_force(self.raw_image_portion, threshold)
         
         snake = TSnake(
-            nodes, force_grid, intensity_grid, a, b, gamma, dt
+            nodes, force_grid, intensity_grid, a, b, q, gamma, dt
         )
         self._initial_tsnake = snake
         return snake
