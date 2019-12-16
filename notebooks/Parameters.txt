@@ -1,0 +1,25 @@
+N = 30       # 30 nodes 
+p = 0.007      # scale for Eq (7)
+c = 1.0      # scale for Eq (A.4)
+a = 4.5     # tension param in Eq (8)
+b = 4.5     # bending param in Eq (8)
+q = 20.0      # scale for Eq (4)
+gamma = 1.0  # friction param in Eq (8)
+dt = 0.2    # step size in Eq (8) 
+sigma = 1.2  # gaussian filter param in Eq (A.4)
+threshold = 15
+
+-----------------------------------------
+(works well)
+N = 30       # 30 nodes 
+p = 0.006      # scale for Eq (7)
+c = 10.0      # scale for Eq (A.4)
+a = 4.5     # tension param in Eq (8)
+b = 8.0     # bending param in Eq (8)
+q = 22.0      # scale for Eq (4)
+gamma = 1.0  # friction param in Eq (8)
+dt = 0.08    # step size in Eq (8) 
+sigma = 1.2  # gaussian filter param in Eq (A.4)
+threshold = 15
+
+-------------------------------------------
