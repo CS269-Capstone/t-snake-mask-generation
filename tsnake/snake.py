@@ -1,6 +1,5 @@
 """
-Module containing the implementation of parts of the paper
-up to and including Section 3.2 of the paper. 
+Module containing implementation of parts of the paper, up to and including Section 3.2
 """
 
 import numpy as np
@@ -17,16 +16,15 @@ class Node(uPoint):
     """
     A class representing a single node in a T-snake.
     """
-
     def __init__(self, x, y):
         super().__init__(x, y)
         self._normal = None
 
     def set_normal(self, norm):
         assert isinstance(
-            norm, np.ndarray), "Norm was type {}".format(type(norm))
+            norm, np.ndarray), 'Norm was type {}'.format(type(norm))
         assert norm.shape == (
-            2,), "Norm should be np array of (2,), got {}".format(norm.shape)
+            2,), 'Norm should be np array of (2,), got {}'.format(norm.shape)
         assert norm is not None
         self._normal = norm
 
@@ -39,11 +37,10 @@ class Element(uEdge):
     """
     Class representing an element / edge between two nodes in the T-snake.
 
-    The Tsnake class instantiates the Elements automatically in its constructor, 
+    The Tsnake class instantiates the Elements automatically in its constructor,
      so directly calling this constructor elsewhere (probably) shouldn't be necessary.
      (NOTE: can change if inconvenient)
     """
-
     def __init__(self, node1, node2):
         assert isinstance(node1, Node)
         assert isinstance(node2, Node)
@@ -62,9 +59,9 @@ class Element(uEdge):
 
     def set_normal(self, norm):
         assert isinstance(
-            norm, np.ndarray), "Norm was type {}".format(type(norm))
+            norm, np.ndarray), 'Norm was type {}'.format(type(norm))
         assert norm.shape == (
-            2,), "Norm should be np array of (2,), got {}".format(norm.shape)
+            2,), 'Norm should be np array of (2,), got {}'.format(norm.shape)
         assert norm is not None
         self._normal = norm
 
@@ -84,8 +81,8 @@ class TSnake(object):
     The merging two T-snakes in the algorithm should be done with:
       TSnake.merge(snake1, snake2)
 
-    In this class, 
-        each element/edge       self.elements[i] 
+    In this class,
+        each element/edge       self.elements[i]
             corresponds to:
         node pair               (self.nodes[i], self.nodes[i+1])
 
@@ -96,9 +93,8 @@ class TSnake(object):
     ===========================================
 
     TODO: calculate intensity normal thingy
-    TODO: comments for a,b, gamma
+    TODO: comments for a, b, gamma
     """
-
     def __init__(self, nodes, force, intensity, a, b, q, gamma, dt):
         for n in nodes:
             assert isinstance(n, Node)
@@ -140,18 +136,18 @@ class TSnake(object):
 
     def _compute_normals(self):
         """
-        Compute normals for each element and node, the computation is O(n) 
+        Compute normals for each element and node, the computation is O(n)
         in the number of edges.
 
         Args:
         =====================================================
         None, uses the initialized snake elements and nodes, but
-        expects elements to be initialized counter clockwise for 
+        expects elements to be initialized counter clockwise for
         any closed contour
         =====================================================
         Returns:
         =====================================================
-        None, stores the normal to each element and node as a 
+        None, stores the normal to each element and node as a
         numpy array of dimension (2,), i.e. [x y]
         =====================================================
         """
@@ -308,15 +304,15 @@ class TSnake(object):
     def bilinear_interpolate(self, im, x, y):
         """
         Computes bilinearly interpolated values for points (x,y) from image im.
-        Follows (and modified) from Alex Flint's code: 
+        Follows (and modified) from Alex Flint's code:
         https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
 
         Args:
         ===========================================
-        (2D numpy array) im: 
+        (2D numpy array) im:
         * 2D numpy array containg the image values for interpolation.
 
-        (numpy array) x: 
+        (numpy array) x:
         * array of x-coordinates to be interpolated.
 
         (numpy array) y:

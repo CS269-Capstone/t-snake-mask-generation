@@ -2,20 +2,19 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 """
-Module containing utilities and base 
-classes to be shared by Snake and Grid
+Module containing utilities and base classes to be shared by Snake and Grid
 """
 
 
 def img_inflation_force(image: np.array, threshold: int) -> np.array:
     """
-    Compute the inflationary force F(I(x, y)), equation (5) from the paper, for 
+    Compute the inflationary force F(I(x, y)), equation (5) from the paper, for
     every integer-index (x, y) of the image.
 
     Args:
     ========================
     (np.array) image:
-    * A np.array of shape (n, m) containing the grayscale image. 
+    * A np.array of shape (n, m) containing the grayscale image.
 
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
@@ -23,7 +22,7 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
 
     Returns:
     ========================
-    (np.array) inflation forces (+1 or -1): 
+    (np.array) inflation forces (+1 or -1):
     * (n, m) array of of intensities (values of 0 to 255)
     ========================
     """
@@ -41,7 +40,7 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
 
     Args:
     ============================================
-    (float) sigma: 
+    (float) sigma:
     * The hyperparameter sigma from Equation (A.4).
 
     (float) c:
@@ -53,7 +52,7 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
 
     Returns:
     ============================================
-    A np.array of shape (n, m, 2) containing the computed values of 
+    A np.array of shape (n, m, 2) containing the computed values of
     Equation (7) at each pixel in the image.
     ============================================
     """
@@ -81,13 +80,12 @@ def dist(a: np.array, b: np.array) -> float:
     """
     Return the distance between a and b
     args:
-
     """
     return np.sqrt(np.sum(np.power(a-b, 2)))
 
 
 def seg_intersect(a1, a2, b1, b2, decimal=3):
-    """ 
+    """
     Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
     Args: all are expected as (1,2) numpy arrays
     * a1: [x, y] a point on the first line
@@ -98,8 +96,8 @@ def seg_intersect(a1, a2, b1, b2, decimal=3):
     return:
     * (1,2) np array denoting [x, y] coordinates of intersection
     """
-    s = np.vstack([a1, a2, b1, b2])        # s for stacked
-    h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
+    s = np.vstack([a1, a2, b1, b2])     # s for stacked
+    h = np.hstack((s, np.ones((4, 1)))) # h for homogeneous
     l1 = np.cross(h[0], h[1])           # get first line
     l2 = np.cross(h[2], h[3])           # get second line
     x, y, z = np.cross(l1, l2)          # point of intersection
@@ -115,7 +113,6 @@ class UtilPoint(object):
     """
     Represents a point on with x and y components
     """
-
     def __init__(self, x, y):
         self._x = x
         self._y = y
@@ -137,10 +134,10 @@ class UtilPoint(object):
         return self._y
 
     def __str__(self):
-        return "({}, {})".format(self._x, self._y)
+        return '({}, {})'.format(self._x, self._y)
 
     def __repr__(self):
-        return self.__str__()  # + ":" + str(self.__hash__()) #NOTE: For debugging, can add hash
+        return self.__str__()  # + ':' + str(self.__hash__()) #NOTE: For debugging, can add hash
 
     def __hash__(self):
         return hash((self._x, self._y))
@@ -163,9 +160,8 @@ class UtilPoint(object):
 
 class UtilEdge(object):
     """
-    Represents one of the sides / cell-edges in the grid. 
+    Represents one of the sides / cell-edges in the grid.
     """
-
     def __init__(self, point1: UtilPoint, point2: UtilPoint) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
@@ -181,14 +177,13 @@ class UtilEdge(object):
         ==========================================
         """
         # pts = sorted([point1, point2])
-        assert point1 != point2, "Cannon initialize edge between the same point {}".format(point1)
+        assert point1 != point2, 'Cannot initialize edge between the same point {}'.format(point1)
         self._point1 = point1  # todo maybe argchecks
         self._point2 = point2
 
     def get_perpendicular(self) -> np.array:
         """
-        Return (2,) np array representing the perpendicular slope to this
-        edge
+        Return (2,) np array representing the perpendicular slope to this edge
         """
         x, y = self._point2 - self._point1
         return np.array([-y, x], dtype=np.float32)
@@ -198,10 +193,10 @@ class UtilEdge(object):
         return np.array([self._point1, self._point2])
 
     def __str__(self):
-        return "<{}, {}>".format(str(self._point1), str(self._point2))
+        return '<{}, {}>'.format(str(self._point1), str(self._point2))
 
     def __repr__(self):
-        return self.__str__() + ":" + str(self.__hash__())
+        return self.__str__() + ':' + str(self.__hash__())
 
     def __hash__(self):
         return hash(tuple(sorted([self._point1, self._point2])))

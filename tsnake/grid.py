@@ -1,20 +1,19 @@
-"""
-Module containing implementations of the ACID technique.
-"""
-
 import numpy as np
+import cv2
 from .snake import TSnake, Element, Node
 from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect, img_force, img_inflation_force
-import cv2
+
+"""
+Module containing implementations of the ACID technique.
+"""
 
 
 class Point(uPoint):
     """
     Represents a point on a grid with x and y components
     """
-
     def __init__(self, x, y):
         super().__init__(x, y)
         self.adjacent_edges = dict()
@@ -38,21 +37,15 @@ class Point(uPoint):
 
 class GridCellEdge(uEdge):
     """
-    Represents one of the sides / cell-edges in the grid. 
+    Represents one of the sides / cell-edges in the grid.
     """
-
     def __init__(self, point1: Point, point2: Point) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
-
         Args:
         ==========================================
         * point1: Point(), for first (origin) point of the line segment
         * point2: Point(), the terminal point of the line segment
-        ==========================================
-        Return:
-        ==========================================
-        * None
         ==========================================
         """
         super().__init__(point1, point2)
@@ -63,13 +56,9 @@ class GridCellEdge(uEdge):
     def add_intersection(self, point: Point) -> None:
         """
         Store the intersection in the edge
-        Arguments:
+        Args:
         -------------------------------
         * point: Point(), point object representing where the intersection occured
-        -------------------------------
-        Return:
-        -------------------------------
-        * None
         -------------------------------
         """
         self.intersections.append(point)
@@ -93,8 +82,7 @@ class Grid(object):
 
       - assumes (for now) that the space we're segmenting / infilling is rectangular
 
-
-    In the paper, Demetri mentions the 'Freudenthal triangulation' for 
+    In the paper, Demetri mentions the 'Freudenthal triangulation' for
     implementing the cell-grid:
      https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
 
@@ -105,7 +93,6 @@ class Grid(object):
 
     (float) scale:
     * float between 0 and 1 representing the number of pixels per cell, i.e. 1=1 vertex/pixel, .5 = 2 vertex per pixel, so on
-
     ==========================================
     """
 
@@ -116,7 +103,7 @@ class Grid(object):
         https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
         """
         assert isinstance(
-            image, np.ndarray), "Image is of type: {}".format(type(image))
+            image, np.ndarray), 'Image is of type: {}'.format(type(image))
         # assert len(image.shape) == 3  # height * width * color channels
 
         # Raw image
@@ -130,14 +117,14 @@ class Grid(object):
         # Simplex Grid Vars
 
         if scale >= 1:
-            s = "Scale > 1 must be an integer multiple of image size."
+            s = 'Scale > 1 must be an integer multiple of image size.'
             assert self.m % scale == 0, s
             assert self.n % scale == 0, s
         elif scale > 0:
             inv = 1/float(scale)
-            assert inv.is_integer(), "If scale < 1, 1/scale must be an integer"
+            assert inv.is_integer(), 'If scale < 1, 1/scale must be an integer'
         else:
-            assert False, "Scale must be > 0."
+            assert False, 'Scale must be > 0.'
         self.scale = scale
         self.grid = None
 
@@ -151,15 +138,9 @@ class Grid(object):
         """
         Store the edge between Points p1 and p2 in both p1 and p2,
         unless the edge already exists, then that edge is used.
-        
         Args:
         ==========================================
         * Point: p1, p2: two points to store edge between
-        ==========================================
-        
-        Returns:
-        ==========================================
-        * None
         ==========================================
         """
         edge = GridCellEdge(p1, p2)
@@ -174,10 +155,8 @@ class Grid(object):
         """
         Private method to generate simplex grid and edge map over image at given scale
         self.grid = np array of size (n/scale) * m/scale
-
-        * Verticies are on if positive, off if negative, and contain 
+        * Verticies are on if positive, off if negative, and contain
             bilinearly interpolated greyscale values according to surrouding pixels
-
         * vertex position indicated by its x and y indicies
         """
         m_steps = None
@@ -207,7 +186,7 @@ class Grid(object):
         Compute's force of self.image
         Args:
         ============================================
-        (float) sigma: 
+        (float) sigma:
         * The hyperparameter sigma from Equation (A.4).
 
         (float) c:
@@ -216,10 +195,9 @@ class Grid(object):
         (float) p:
         * The hyperparameter p from Equation (7).
         ============================================
-
         Returns:
         ============================================
-        A np.array of shape (n, m, 2) containing the computed values of 
+        A np.array of shape (n, m, 2) containing the computed values of
         Equation (7) at each pixel in the image.
         ============================================
         """
@@ -230,7 +208,6 @@ class Grid(object):
     def get_inflation_force(self, threshold):
         """
         Compute F(I(img)), equation (5) from the paper, for inflation force.
-        
         Args:
         ========================
         (int) threshold:
@@ -238,7 +215,7 @@ class Grid(object):
         ========================
         Returns:
         ========================
-        (np.array) inflation forces (+1 or -1): 
+        (np.array) inflation forces (+1 or -1):
         * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
         ========================
         """
@@ -250,12 +227,11 @@ class Grid(object):
         """
         Add a new snake to the grid
         """
-        # assert isinstance(new_snake, TSnake) # TODO: this line doesn't work
         self._snakes.append(new_snake)
 
     def get_closest_node(self, position: np.array) -> np.array:
         """
-        Get the closest grid point to the coordinates 
+        Get the closest grid point to the coordinates
         of the snake node passed in position
         args:
         * np array (1,2) containing x and y position of node
@@ -273,15 +249,15 @@ class Grid(object):
         """
         get all edges bounded by the box with the index
         position as it's top-left corner
-        
+
         Args:
         ==========================================
         * index: np array (1,2) of index of bounding box's top-left corner
         ==========================================
-        
+
         Returns:
         ==========================================
-        * edges: set() of all edges bounded by this box, 
+        * edges: set() of all edges bounded by this box,
                  i.e., potential intersection points
         ==========================================
         """
@@ -358,7 +334,6 @@ class Grid(object):
                     #     edge, node1.position[0, 0], node1.position[0,1], node2.position[0, 0], node2.position[0, 1],
                     #     index, intersect_pt
                     # ))
-
         return intersections
 
     def get_snake_intersections(self) -> [[Point]]:
@@ -374,7 +349,6 @@ class Grid(object):
             intersections.append(self._compute_intersection(snake))
         return intersections
 
-
 ### TODOS ###
 # 1. snake updates - Joe
 # 2. gan mask -> snake -> gan mask - Cole
@@ -384,8 +358,3 @@ class Grid(object):
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
