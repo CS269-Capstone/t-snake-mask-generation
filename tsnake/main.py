@@ -146,11 +146,11 @@ class Main(object):
                 grid = self.grid
                 snakes = self.snakes[r_num]
 
-                # evolves each snake
+                # Run:
+                # 1) the m-step function (which has M deformation steps), and
+                # 2) the reparameterization (occuring every M deformation steps)
                 for snake in snakes:
                     snake.m_step(M)
-
-                # reparameterizes snake every M time steps
                 new_snakes = grid.reparameterize(snakes)
 
                 # =======================================
