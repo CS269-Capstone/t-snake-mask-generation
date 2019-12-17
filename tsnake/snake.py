@@ -7,7 +7,6 @@ from scipy.linalg import solve_triangular
 from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect
-# from tqdm import tqdm
 
 # Implementation Notes: https://www.crisluengo.net/archives/217#more-217
 
@@ -36,8 +35,7 @@ class Node(uPoint):
 class Element(uEdge):
     """
     Class representing an element / edge between two nodes in the T-snake.
-
-    The Tsnake class instantiates the Elements automatically in its constructor,
+    The T-Snake class instantiates the Elements automatically in its constructor,
      so directly calling this constructor elsewhere (probably) shouldn't be necessary.
      (NOTE: can change if inconvenient)
     """
@@ -73,25 +71,20 @@ class Element(uEdge):
 class TSnake(object):
     """
     A class representing a *single* T-snake at a given instance in time.
-
     If the initial T-snake splits into two, then there should be *two*
       instances of T-snakes present in the algorithm.
       (NOTE: can change this if inconvenient)
-
     The merging two T-snakes in the algorithm should be done with:
       TSnake.merge(snake1, snake2)
-
     In this class,
         each element/edge       self.elements[i]
             corresponds to:
         node pair               (self.nodes[i], self.nodes[i+1])
-
     Args:
     ===========================================
     (list) nodes:
     * A list of Node instances, in order i=0, 1, 2, ..., N-1
     ===========================================
-
     TODO: calculate intensity normal thingy
     TODO: comments for a, b, gamma
     """
@@ -138,7 +131,6 @@ class TSnake(object):
         """
         Compute normals for each element and node, the computation is O(n)
         in the number of edges.
-
         Args:
         =====================================================
         None, uses the initialized snake elements and nodes, but
@@ -160,83 +152,6 @@ class TSnake(object):
             # Perpendicular of current element, normalized
             norm = first_element.get_perpendicular().reshape(2,)
             norm /= np.sum(np.abs(norm))
-
-            ### START OF NOTE ###
-            # This code adds complexity but doesn't work
-            # all of the time, it seems like the most important
-            # piece is that the nodes are processed counter-clockwise
-            # TODO@ERIC: If you find that this works as is, remove this block
-            ### END OF NOTE ###
-
-            # if i == 0:
-            #     # j = 1 because We don't care about the normal's
-            #     # intersection with the edge it originates from
-            #     for j in range(1, len(self._elements)):
-
-            #         element = self._elements[j]
-            #         e1, e2 = element.endpoints
-            #         midpoint = 0.5 * (p1 + p2)
-            #         midpoint = midpoint.reshape(-1)
-
-            #         res = seg_intersect(
-            #             e1.position, e2.position,
-            #             midpoint,
-            #             midpoint + norm
-            #         )
-
-            #         # If they don't intersect at all, continue
-            #         if res[0, 0] == float('inf'):
-            #             continue
-
-            #         direction = res - midpoint
-            #         x, y = np.sign(direction.reshape(-1))
-            #         nx, ny = np.sign(norm)
-            #         # If the ray from p1 to intersection and normal are
-            #         # same direction, then normal must be aiming into
-            #         # the shape, so flip it
-            #         if x == nx and y == ny:
-            #             norm *= -1
-            #         break
-            # else:
-            #     nx, ny = np.sign(norm)
-
-            #     # Previous normal (x and y components)
-            #     prev = self._elements[i-1]
-            #     e1, e2 = prev.endpoints
-            #     old_norm = prev.normal
-            #     pnx, pny = np.sign(old_norm)
-
-            #     new_mid = (0.5 * (p1 + p2)).reshape(-1)
-            #     old_mid = (0.5 * (e1 + e2)).reshape(-1)
-
-            #     # * If the two normals intersect, make sure the new
-            #     # one is pointing away from the intersection
-            #     # * If they do not, make sure the new one points in
-            #     # the same direction as the old one
-            #     res = seg_intersect(
-            #         old_mid, old_mid + old_norm,
-            #         new_mid, new_mid + norm
-            #     )
-
-            #     # If they don't intersect at all, continue
-            #     if res[0, 0] == float('inf'):
-            #         norm = old_norm
-            #     else:
-            #         direction1 = res - old_mid
-            #         direction2 = res - new_mid
-            #         x1, y1 = np.sign(direction1.reshape(-1))
-            #         x2, y2 = np.sign(direction2.reshape(-1))
-
-            #         # Is the intersection inside or outside?
-            #         intersect_outside = x1 == pnx and y1 == pny
-
-            #         if intersect_outside:
-            #             # Are new norm and intersect in same direction?
-            #             if x2 != nx and y2 != ny:
-            #                 norm *= -1
-            #         else:
-            #             if x2 == nx and y2 == ny:
-            #                 norm *= -1
 
             first_element.set_normal(norm)
             # Now we find the normals for each node, which
@@ -306,7 +221,6 @@ class TSnake(object):
         Computes bilinearly interpolated values for points (x,y) from image im.
         Follows (and modified) from Alex Flint's code:
         https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
-
         Args:
         ===========================================
         (2D numpy array) im:
@@ -319,7 +233,6 @@ class TSnake(object):
         * array of y-coordinates to be interpolated.
         ===========================================
         """
-
         # find the top left point to interpolate from
         x0 = np.floor(x).astype(int)
         y0 = np.floor(y).astype(int)

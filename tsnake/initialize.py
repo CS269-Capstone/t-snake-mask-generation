@@ -23,7 +23,6 @@ def load_grayscale_image(path):
     (str) path:
     * Path to *raw* image file.
     ==============
-
     Returns:
     2D np.array representing *grayscale* image.
     """
@@ -46,7 +45,6 @@ def load_mask(path, convert=False):
     (str) path:
     * Path to mask file.
     ==============
-
     Returns:
     2D binary np.array representing the mask.
       - mask[i, j] == 1    --> means that pixel (i, j) is masked
@@ -244,8 +242,8 @@ class MaskedRegion(object):
 
         self.top_row = b      # the coordinates of this rectangular
         self.bottom_row = u   # (partially-) masked region
-        self.left_col = l     #
-        self.right_col = r    #
+        self.left_col = l
+        self.right_col = r
 
         # raw_image_portion == intensity_grid
         self.raw_image_portion = raw_image_full[b:u, l:r]
@@ -489,7 +487,6 @@ class MaskedRegion(object):
         """
         NOTE: can we manipulate the force grid to make sure the snake
               doesn't leave the user-masked area?
-
         Args:
         ============================================
         (float) sigma:
@@ -501,7 +498,6 @@ class MaskedRegion(object):
         (float) p:
         * The hyperparameter p from Equation (7).
         ============================================
-
         Returns:
         ============================================
         A np.array of shape (n, m, 2) containing the computed values of

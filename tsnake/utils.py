@@ -10,7 +10,6 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     """
     Compute the inflationary force F(I(x, y)), equation (5) from the paper, for
     every integer-index (x, y) of the image.
-
     Args:
     ========================
     (np.array) image:
@@ -19,7 +18,6 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     (int) threshold:
     * Threshold value, intensities above this result in 1, else -1, from equation (5)
     ========================
-
     Returns:
     ========================
     (np.array) inflation forces (+1 or -1):
@@ -37,7 +35,6 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     """
     Computes an array of force values for the given image.
     Equation (7) in the paper.
-
     Args:
     ============================================
     (float) sigma:
@@ -49,7 +46,6 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
     (float) p:
     * The hyperparameter p from Equation (7).
     ============================================
-
     Returns:
     ============================================
     A np.array of shape (n, m, 2) containing the computed values of
@@ -79,7 +75,6 @@ def img_force(image: np.array, sigma: float, c: float, p: float) -> np.array:
 def dist(a: np.array, b: np.array) -> float:
     """
     Return the distance between a and b
-    args:
     """
     return np.sqrt(np.sum(np.power(a-b, 2)))
 
@@ -137,7 +132,7 @@ class UtilPoint(object):
         return '({}, {})'.format(self._x, self._y)
 
     def __repr__(self):
-        return self.__str__()  # + ':' + str(self.__hash__()) #NOTE: For debugging, can add hash
+        return self.__str__()  # + ':' + str(self.__hash__()) # NOTE: For debugging, can add hash
 
     def __hash__(self):
         return hash((self._x, self._y))
@@ -165,15 +160,10 @@ class UtilEdge(object):
     def __init__(self, point1: UtilPoint, point2: UtilPoint) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
-
         Args:
         ==========================================
         * point1: Point(), for first (origin) point of the line segment
         * point2: Point(), the terminal point of the line segment
-        ==========================================
-        Return:
-        ==========================================
-        * None
         ==========================================
         """
         # pts = sorted([point1, point2])
