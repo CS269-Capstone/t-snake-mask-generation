@@ -324,7 +324,7 @@ class Grid(object):
 
     def reparameterize(self, snakes: TSnakes):
         '''
-        Takes a list of T-Snake instances and returns a new list of TSnakes
+        Takes a list of T-Snakes and returns a new list of T-Snakes
         (which have possibly been split/merged/etc).
         If no snakes are split/merged, then:
         1) the snakes are presented in the same order as before, AND
@@ -334,6 +334,9 @@ class Grid(object):
         for snake in snakes:
             # Compute intersections in counter-clockwise direction,
             # so subsequent normal calculation is performed correctly.
+            intersections = self._compute_intersection(snake)
+            print('intersections:', intersections)
+
             # Create new snake nodes in same order as intersections were computed.
             # Initialize snake in same order as intersections.
             new_snakes.append(snake)
