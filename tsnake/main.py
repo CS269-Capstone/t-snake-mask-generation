@@ -1,6 +1,7 @@
 """
 Main entry point for the project.
 """
+import warnings
 
 import cv2
 import numpy as np
@@ -130,53 +131,59 @@ class Main(object):
         # set of indices of MaskedRegions whose T-snake(s) have not converged yet
         to_finish = set(list(range(len(self.masked_regions))))
         
-        for r_num in to_finish:
-            region = self.masked_regions[r_num]
-            grid = self.grids[r_num]
-            snakes = self.snakes[r_num]
-            
-            # evolve each snake
-            for snake in snakes:
-                snake.m_step(M)
-            
-            # TODO: I don't know what the interface for Grid is 
-            # yet - my idea is that Grid.reparametrize() should
-            # be a method which takes a list of TSnake instances
-            # and returns a new list of TSnakes (which have possibly 
-            # been split/merged/etc).
-            # Assumes that if no snakes have been split/merged, then
-            # the snakes are presented in the same order as before,      AND
-            # that each snake's nodes are presented in the same order
-            new_snakes = grid.reparametrize(snakes)
-            
-            # =======================================
-            # CHECK FOR CONVERGENCE =================
-            # =======================================
-            # NECESSARY CONDITION #1: the number of T-snakes in this 
-            # MaskedRegion remained constant (no snakes have merged or split)
-            const_num_snakes = len(new_snakes) == len(snakes)
-            if not const_num_snakes:
-                continue  
-                
-            # NECESSARY CONDITION #2: for every snake, the number of 
-            # nodes per T-snake remained constant
-            const_nodes_per_snake = all([snakes[i].num_nodes == new_snakes[i].num_nodes for i in range(len(snakes))])
-            if not const_nodes_per_snake:
-                continue
-            
-            converged = True
-            # NECESSARY CONDITION #3: for every snakes, each node's position
-            # has moved by no more than `tolerance`
-            for s in range(len(snakes)):
-                # check if any nodes have moved by more than `tolerance`
-                if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance]):
-                    converged = False
-                    break
+        iter_num = 0
+        while len(to_finish) > 0 and iter_num < max_iter:
+            for r_num in to_finish:
+                region = self.masked_regions[r_num]
+                grid = self.grids[r_num]
+                snakes = self.snakes[r_num]
+
+                # evolve each snake
+                for snake in snakes:
+                    snake.m_step(M)
+
+                # TODO: I don't know what the interface for Grid is 
+                # yet - my idea is that Grid.reparametrize() should
+                # be a method which takes a list of TSnake instances
+                # and returns a new list of TSnakes (which have possibly 
+                # been split/merged/etc).
+                # Assumes that if no snakes have been split/merged, then
+                # the snakes are presented in the same order as before,      AND
+                # that each snake's nodes are presented in the same order
+                new_snakes = grid.reparametrize(snakes)
+
+                # =======================================
+                # CHECK FOR CONVERGENCE =================
+                # =======================================
+                # NECESSARY CONDITION #1: the number of T-snakes in this 
+                # MaskedRegion remained constant (no snakes have merged or split)
+                const_num_snakes = len(new_snakes) == len(snakes)
+                if not const_num_snakes:
+                    continue  
+
+                # NECESSARY CONDITION #2: for every snake, the number of 
+                # nodes per T-snake remained constant
+                const_nodes_per_snake = all([snakes[i].num_nodes == new_snakes[i].num_nodes for i in range(len(snakes))])
+                if not const_nodes_per_snake:
+                    continue
+
+                converged = True
+                # NECESSARY CONDITION #3: for every snakes, each node's position
+                # has moved by no more than `tolerance`
+                for s in range(len(snakes)):
+                    # check if any nodes have moved by more than `tolerance`
+                    if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance]):
+                        converged = False
+                        break
+
+                if converged:
+                    to_finish.discard(r_num)
+                # =======================================
+                # =======================================
                     
-            if converged:
-                to_finish.discard(r_num)
-                    
-    
+        if len(to_finish) > 0:
+            warnings.warn('One or more T-snakes did not converge: see MaskedRegions %s' % to_finish)
+            
         # ====================================================
         # EXTRACT THE RESULTING IMAGE ========================
         # ====================================================
