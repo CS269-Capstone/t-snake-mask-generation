@@ -378,6 +378,7 @@ class MaskedRegion(object):
         else:
             plt.savefig(save_fig)
             plt.clf()
+            
     def initialize_tsnake(
         self, N, p, c, sigma, a, b, gamma, dt, threshold=100, verbose=False
     ):
