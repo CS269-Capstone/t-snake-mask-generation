@@ -178,10 +178,9 @@ class Main(object):
 
                 if converged:
                     to_finish.discard(r_num)
-                    
-                iter_num += 1
                 # =======================================
                 # =======================================
+            iter_num += 1
                     
         if len(to_finish) > 0:
             warnings.warn('One or more T-snakes did not converge: see MaskedRegions %s' % to_finish)
