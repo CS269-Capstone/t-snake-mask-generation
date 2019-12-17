@@ -63,8 +63,9 @@ class Main(object):
         # ========================================================
         # A list of MaskedRegion objects (see initialize.py)
         self.masked_regions = None
-        # A list of corresponding Grid instances (see grid.py)
-        self.grids = None
+        # The Grid instance for the image being operated on 
+        # (self.grayscale_image, see grid.py)
+        self.grid = None
         # A list of corresponding lists of Tsnake instances
         self.snakes = None
         
@@ -84,6 +85,25 @@ class Main(object):
             self.snake_output_image = output
             
         return output
+    
+    def _snakes_to_mask(self, snakes):
+        """
+        Take a list of snakes, and return an np array denoting a mask
+        
+        Args:
+        =======================
+        * snakes: list(TSnake), list of all converged tsnakes for the image
+        =======================
+        Return:
+        =======================
+        * mask: np.array containing the mask as 0s and 1s
+        =======================
+        """
+        assert isinstance(self.grid, Grid), "Grid should've been initialized, but wasn't"
+
+        mask = np.zeros(self.grayscale_image.shape)
+        #TODO: Reuse code from re-parametrization
+        raise NotImplementedError
         
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
         """
@@ -112,18 +132,18 @@ class Main(object):
         self.masked_regions = init.compute_masked_regions(
             self.grayscale_image, self.user_mask
         )
-        # One Grid and one list of T-snakes per MaskedRegion
-        self.grids = [None] * len(self.masked_regions)
+        # One Grid per image
+        self.grid = Grid(self.grayscale_image, scale=grid_scale)
         self.snakes = [None] * len(self.masked_regions)
-        for r_num, region in enumerate(self.masked_regions):
-            # Initialize grid
-            image_portion = region.raw_image_portion
-            self.grids[r_num] = Grid(image_portion, scale=grid_scale)
-            
-            # Initialize T-snake
+
+        for r_num, region in enumerate(self.masked_regions):           
+            # Initialize T-snake from each masked reigon, and add it to grid
             t_snake = region.initialize_tsnake(**snake_params)
             self.snakes[r_num] = [t_snake]
-            self.grids[r_num].add_snake(t_snake)
+            
+            # TODO@ALLEN: Remove the following in favor of grid.reparametrize(snakes), 
+            # i.e. grid will not own snakes, will just reparametrize and return result
+            self.grid.add_snake(t_snake) 
             
         # ====================================================
         # RUN THE T-SNAKE ====================================
@@ -134,8 +154,7 @@ class Main(object):
         iter_num = 0
         while len(to_finish) > 0 and iter_num < max_iter:
             for r_num in to_finish:
-                region = self.masked_regions[r_num]
-                grid = self.grids[r_num]
+                grid = self.grid
                 snakes = self.snakes[r_num]
 
                 # evolve each snake
@@ -152,6 +171,24 @@ class Main(object):
                 # that each snake's nodes are presented in the same order
                 new_snakes = grid.reparametrize(snakes)
 
+                """ 
+                TODO@Eric or Allen:
+                def reparametrize(self, snakes):
+                    new_snakes = []
+                    for snake in snakes:
+                        * compute intersections in counter 
+                        clockwise direction (so subsequent normal
+                        calculation is performed correctly!)
+                        * create new snake nodes in same 
+                        order as intersections were computed
+                        * Initialize snake in same order as intersections
+                        new_snakes.add(new_snake)
+                        if('the snake split'):
+                            * add other snakes too
+                    return new_snakes
+                """
+                
+
                 # =======================================
                 # CHECK FOR CONVERGENCE =================
                 # =======================================
@@ -159,12 +196,14 @@ class Main(object):
                 # MaskedRegion remained constant (no snakes have merged or split)
                 const_num_snakes = len(new_snakes) == len(snakes)
                 if not const_num_snakes:
+                    self.snakes[r_num] = new_snakes
                     continue  
 
                 # NECESSARY CONDITION #2: for every snake, the number of 
                 # nodes per T-snake remained constant
                 const_nodes_per_snake = all([snakes[i].num_nodes == new_snakes[i].num_nodes for i in range(len(snakes))])
                 if not const_nodes_per_snake:
+                    self.snakes[r_num] = new_snakes
                     continue
 
                 converged = True
@@ -176,8 +215,10 @@ class Main(object):
                         converged = False
                         break
 
+                self.snakes[r_num] = new_snakes
                 if converged:
                     to_finish.discard(r_num)
+                    
                 # =======================================
                 # =======================================
             iter_num += 1
@@ -188,6 +229,14 @@ class Main(object):
         # ====================================================
         # EXTRACT THE RESULTING IMAGE ========================
         # ====================================================
+        all_snakes = []
+        for snake_list in self.snakes:
+            for s in snake_list:
+                all_snakes.append(s)
+
+        self.snake_mask = self._snakes_to_mask(all_snakes)
+        self.snake_output_image = self._inpaint('snake')
+        self.user_output_image = self._inpaint('user')
         raise NotImplementedError    # TODO
         
     
