@@ -178,6 +178,8 @@ class Main(object):
 
                 if converged:
                     to_finish.discard(r_num)
+                    
+                iter_num += 1
                 # =======================================
                 # =======================================
                     
