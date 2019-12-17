@@ -288,7 +288,6 @@ class Grid(object):
         Return:
         * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
         """
-
         elements = snake.elements  # TODO: Add this function to snake after merge
         intersections = []
         intersect_set = set()
@@ -310,7 +309,7 @@ class Grid(object):
                     #     edge, node1.position[0, 0], node1.position[0,1], node2.position[0, 0], node2.position[0, 1],
                     #     index, intersect_pt
                     # ))
-                    
+
         return intersections
 
     def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:

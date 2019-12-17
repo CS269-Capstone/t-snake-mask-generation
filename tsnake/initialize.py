@@ -150,13 +150,11 @@ def _find_disjoint_masked_regions(mask):
     """
     Helper function for compute_masked_regions()
     TODO: this example can explain this function
-
     0 0 1 1 0 1
     0 0 0 1 1 0
     0 0 0 0 0 0
     0 1 1 1 0 1
     1 1 0 1 0 0
-
     TODO: doc
     """
     # indices (i, j) where mask[i, j] == 1
@@ -194,7 +192,6 @@ def compute_masked_regions(raw_image, raw_mask):
     =====================================================
     (np.array) raw_image:
     * The full, un-masked, grayscale image.
-
     (np.array) raw_mask:
     * The full mask (a binary numpy matrix).
     =====================================================
@@ -377,33 +374,24 @@ class MaskedRegion(object):
 
         NOTE: we may eventually need to find a way to initialize
               the nodes a little more intelligently
-
         Args:
         =====================================================
         (int) N:
         * The initial number of T-snake nodes.
-
         (float) p:
         * The hyperparameter p from Equation (7).
-
         (float) c:
         * The hyperparameter c from Equation (A.4).
-
         (float) sigma:
         * The hyperparameter sigma from Equation (A.4).
-
         (float) a:
         * The hyperparameter a from Equations (1), (8).
-
         (float) b:
         * The hyperparameter b from Equations (1), (8).
-
         (float) q:
         * The hyperparameter q from Equations (4).
-
         (float) gamma:
         * The hyperparameter gamma from Equations (1), (8).
-
         (bool) verbose:
         * Set to True to print extra information.
         =====================================================
@@ -491,10 +479,8 @@ class MaskedRegion(object):
         ============================================
         (float) sigma:
         * The hyperparameter sigma from Equation (A.4).
-
         (float) c:
         * The hyperparameter c from Equation (A.4).
-
         (float) p:
         * The hyperparameter p from Equation (7).
         ============================================
@@ -511,7 +497,6 @@ class MaskedRegion(object):
         """
         Finds the pixels in this rectangular sub-region which are on the border
         between masked and unmasked.
-
         NOTE: returns a list of coordinates (row, col). These coordinates are
               relative to *this* rectangle's coordinate system, not the
               entire image's coordinate system.

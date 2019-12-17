@@ -131,7 +131,7 @@ class Main(object):
         self.snakes = [None] * len(self.masked_regions)
 
         for r_num, region in enumerate(self.masked_regions):
-            # Initialize T-snake from each masked region, and add it to grid
+            # Initialize T-snake from each masked region
             t_snake = region.initialize_tsnake(**snake_params)
             self.snakes[r_num] = [t_snake]
 
@@ -140,17 +140,17 @@ class Main(object):
         # ====================================================
         # set of indices of MaskedRegions whose T-snake(s) have not converged yet
         to_finish = set(list(range(len(self.masked_regions))))
-
         iter_num = 0
         while len(to_finish) > 0 and iter_num < max_iter:
             for r_num in to_finish:
                 grid = self.grid
                 snakes = self.snakes[r_num]
 
-                # evolve each snake
+                # evolves each snake
                 for snake in snakes:
                     snake.m_step(M)
 
+                # reparameterizes snake every M time steps
                 new_snakes = grid.reparameterize(snakes)
 
                 # =======================================

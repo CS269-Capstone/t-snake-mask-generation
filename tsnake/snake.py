@@ -272,7 +272,6 @@ class TSnake(object):
     def m_step(self, M):
         """
         Runs the M iterations of the snake evolution on the N nodes of the snake.
-
         Args:
         ===========================================
         (int) M:
