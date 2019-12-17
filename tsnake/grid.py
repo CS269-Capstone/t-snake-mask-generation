@@ -1,29 +1,24 @@
-"""
-Module containing implementations of the ACID technique.
-"""
-
 import numpy as np
+import cv2
 from .snake import TSnake, Element, Node
 from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect, img_force, img_inflation_force
-import cv2
+from typing import List
+TSnakes = List[TSnake]
+
+"""
+Module containing implementations of the ACID technique.
+"""
 
 
 class Point(uPoint):
     """
     Represents a point on a grid with x and y components
     """
-
     def __init__(self, x, y):
         super().__init__(x, y)
         self.adjacent_edges = dict()
-
-    # TODO@allen:
-    # each point keeps track of edges and maintains set of all points
-    # associated with the edges that start or terminate on that point
-    # when adding a new edge between points, ensure that the pair of points doesn't
-    # already have that edge, if it does, assign the one that already exists
 
     def add_edge(self, edge):
         '''
@@ -38,38 +33,26 @@ class Point(uPoint):
 
 class GridCellEdge(uEdge):
     """
-    Represents one of the sides / cell-edges in the grid. 
+    Represents one of the sides / cell-edges in the grid.
     """
-
     def __init__(self, point1: Point, point2: Point) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
-
         Args:
         ==========================================
         * point1: Point(), for first (origin) point of the line segment
         * point2: Point(), the terminal point of the line segment
         ==========================================
-        Return:
-        ==========================================
-        * None
-        ==========================================
         """
         super().__init__(point1, point2)
-
-        # TODO: implement this data structure
         self.intersections = list()
 
     def add_intersection(self, point: Point) -> None:
         """
         Store the intersection in the edge
-        Arguments:
+        Args:
         -------------------------------
         * point: Point(), point object representing where the intersection occured
-        -------------------------------
-        Return:
-        -------------------------------
-        * None
         -------------------------------
         """
         self.intersections.append(point)
@@ -90,14 +73,10 @@ class Grid(object):
       - image meaning the blank space the T-snake is segmenting / infilling
       - assumes that each triangle-cell is a right triangle
         (for the Coxeter-Freudenthal triangulation) (see Fig 2 in the paper)
-
       - assumes (for now) that the space we're segmenting / infilling is rectangular
-
-
-    In the paper, Demetri mentions the 'Freudenthal triangulation' for 
+    In the paper, Demetri mentions the 'Freudenthal triangulation' for
     implementing the cell-grid:
      https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
-
     Args:
     ==========================================
     (np.array) image:
@@ -105,18 +84,12 @@ class Grid(object):
 
     (float) scale:
     * float between 0 and 1 representing the number of pixels per cell, i.e. 1=1 vertex/pixel, .5 = 2 vertex per pixel, so on
-
     ==========================================
     """
 
     def __init__(self, image, scale=1.0):
-        """
-        @allen: Should we pass a snake to the board? should the board own the snake?
-        TODO: implement Freudenthal triangulation
-        https://www.cs.bgu.ac.il/~projects/projects/carmelie/html/triang/fred_T.htm
-        """
         assert isinstance(
-            image, np.ndarray), "Image is of type: {}".format(type(image))
+            image, np.ndarray), 'Image is of type: {}'.format(type(image))
         # assert len(image.shape) == 3  # height * width * color channels
 
         # Raw image
@@ -128,38 +101,30 @@ class Grid(object):
         self.image_intensity = None
 
         # Simplex Grid Vars
-
         if scale >= 1:
-            s = "Scale > 1 must be an integer multiple of image size."
+            s = 'Scale > 1 must be an integer multiple of image size.'
             assert self.m % scale == 0, s
             assert self.n % scale == 0, s
         elif scale > 0:
             inv = 1/float(scale)
-            assert inv.is_integer(), "If scale < 1, 1/scale must be an integer"
+            assert inv.is_integer(), 'If scale < 1, 1/scale must be an integer'
         else:
-            assert False, "Scale must be > 0."
+            assert False, 'Scale must be > 0.'
         self.scale = scale
         self.grid = None
 
         # Hash map containing [Point(upper left corner)]:all edges in pair of simplicies
         self.point_edge_map = dict()
         self.edges = dict()  # set of all edges
-        self._snakes = list()  # All the snakes on this grid
-        # print("Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}".format(self.m, self.n, self.d))
+        # print('Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}'.format(self.m, self.n, self.d))
 
     def _store_edge(self, p1: Point, p2: Point) -> None:
         """
         Store the edge between Points p1 and p2 in both p1 and p2,
         unless the edge already exists, then that edge is used.
-        
         Args:
         ==========================================
         * Point: p1, p2: two points to store edge between
-        ==========================================
-        
-        Returns:
-        ==========================================
-        * None
         ==========================================
         """
         edge = GridCellEdge(p1, p2)
@@ -172,12 +137,10 @@ class Grid(object):
 
     def gen_simplex_grid(self):
         """
-        Private method to generate simplex grid and edge map over image at given scale
+        Method to generate simplex grid and edge map over image at given scale
         self.grid = np array of size (n/scale) * m/scale
-
-        * Verticies are on if positive, off if negative, and contain 
+        * Vertices are on if positive, off if negative, and contain
             bilinearly interpolated greyscale values according to surrouding pixels
-
         * vertex position indicated by its x and y indicies
         """
         m_steps = None
@@ -207,7 +170,7 @@ class Grid(object):
         Compute's force of self.image
         Args:
         ============================================
-        (float) sigma: 
+        (float) sigma:
         * The hyperparameter sigma from Equation (A.4).
 
         (float) c:
@@ -216,10 +179,9 @@ class Grid(object):
         (float) p:
         * The hyperparameter p from Equation (7).
         ============================================
-
         Returns:
         ============================================
-        A np.array of shape (n, m, 2) containing the computed values of 
+        A np.array of shape (n, m, 2) containing the computed values of
         Equation (7) at each pixel in the image.
         ============================================
         """
@@ -230,7 +192,6 @@ class Grid(object):
     def get_inflation_force(self, threshold):
         """
         Compute F(I(img)), equation (5) from the paper, for inflation force.
-        
         Args:
         ========================
         (int) threshold:
@@ -238,7 +199,7 @@ class Grid(object):
         ========================
         Returns:
         ========================
-        (np.array) inflation forces (+1 or -1): 
+        (np.array) inflation forces (+1 or -1):
         * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
         ========================
         """
@@ -246,16 +207,9 @@ class Grid(object):
             self.image_intensity = img_inflation_force(self.image, threshold)
         return self.image_intensity
 
-    def add_snake(self, new_snake):
-        """
-        Add a new snake to the grid
-        """
-        # assert isinstance(new_snake, TSnake) # TODO: this line doesn't work
-        self._snakes.append(new_snake)
-
     def get_closest_node(self, position: np.array) -> np.array:
         """
-        Get the closest grid point to the coordinates 
+        Get the closest grid point to the coordinates
         of the snake node passed in position
         args:
         * np array (1,2) containing x and y position of node
@@ -273,15 +227,13 @@ class Grid(object):
         """
         get all edges bounded by the box with the index
         position as it's top-left corner
-        
         Args:
         ==========================================
         * index: np array (1,2) of index of bounding box's top-left corner
         ==========================================
-        
         Returns:
         ==========================================
-        * edges: set() of all edges bounded by this box, 
+        * edges: set() of all edges bounded by this box,
                  i.e., potential intersection points
         ==========================================
         """
@@ -296,9 +248,9 @@ class Grid(object):
     def _get_element_intersection(self, element: Element, edge: GridCellEdge) -> Point:
         """
         Get intersection between snake element and grid-cell-edge
-        \nargs:\n
+        Args:
         * element: snake element, edge: GridCellEdge
-        \nreturn:\n
+        Return:
         * Point: intersection point, or None if no intersection
         """
         s1, s2 = element.nodes  # TODO: Add to snake, (1,2) np array of [dx, dy]
@@ -331,9 +283,9 @@ class Grid(object):
     def _compute_intersection(self, snake: TSnake) -> [Point]:
         """
         Compute intersections between the grid and the snake in question
-        \nArguments:\n
+        Args:
         * snake: TSnake to compute intersections with
-        \nReturn:\n
+        Return:
         * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
         """
         # TODO: KNOWN BUG: If the grid intersects a node's exact position, that intersection
@@ -358,34 +310,36 @@ class Grid(object):
                     #     edge, node1.position[0, 0], node1.position[0,1], node2.position[0, 0], node2.position[0, 1],
                     #     index, intersect_pt
                     # ))
-
         return intersections
 
-    def get_snake_intersections(self) -> [[Point]]:
+    def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:
         """
         Compute intersections between all snakes on the grid and the grid.
-        \nArgs:\n
-        * None
-        \nReturn:\n
+        Args:
+        * List of T-Snakes
+        Return:
         * list(list(Point)) containing the intersection points for each snake
         """
-        intersections = []
-        for snake in self._snakes:
-            intersections.append(self._compute_intersection(snake))
-        return intersections
+        return [self._compute_intersection(snake) for snake in snakes]
 
-
-### TODOS ###
-# 1. snake updates - Joe
-# 2. gan mask -> snake -> gan mask - Cole
-# 3. algo phase 1: grid intersections - Allen
-# 4. algo phase 2: turning nodes on / off, remove inactive points - Eric
+    def reparameterize(self, snakes: TSnakes):
+        '''
+        Takes a list of T-Snake instances and returns a new list of TSnakes
+        (which have possibly been split/merged/etc).
+        If no snakes are split/merged, then:
+        1) the snakes are presented in the same order as before, AND
+        2) each snake's nodes are presented in the same order.
+        '''
+        new_snakes = []
+        for snake in snakes:
+            # Compute intersections in counter-clockwise direction,
+            # so subsequent normal calculation is performed correctly.
+            # Create new snake nodes in same order as intersections were computed.
+            # Initialize snake in same order as intersections.
+            new_snakes.append(snake)
+            # If the snake split, add the newly created snakes too.
+        return new_snakes
 
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
