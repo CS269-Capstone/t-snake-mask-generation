@@ -288,11 +288,10 @@ class Grid(object):
         Return:
         * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
         """
-        # TODO: KNOWN BUG: If the grid intersects a node's exact position, that intersection
-        # is added to two edges (because the point is technically on two edges). Whatever the desired
-        # behavor is, should be a relatively easy fix since points at same location hash the same
+
         elements = snake.elements  # TODO: Add this function to snake after merge
         intersections = []
+        intersect_set = set()
         for element in elements:
             # Get all edges surrounding each node, and check each for intersections
             node1, node2 = element.nodes  # TODO: Add this function to snake after merge
@@ -300,16 +299,18 @@ class Grid(object):
             edges_to_check = self.get_cell_edges(index)
             for edge in edges_to_check:
                 intersect_pt = self._get_element_intersection(element, edge)
-                if intersect_pt is not None:
+                if intersect_pt is not None and intersect_pt not in intersect_set:
                     intersections.append(intersect_pt)
                     edge.add_intersection(intersect_pt)
-                    # NOTE: Code to debug intersection points, see known bug above
+                    intersect_set.add(intersect_pt)
+                    # # NOTE: Code to debug intersection points, see known bug above
                     # if np.sum(intersect_pt.position - node1.position) == 0 or np.sum(intersect_pt.position - node2.position) == 0:
                     #     print("Following intersection goes through existing point:")
                     # print("Edge: {}, Node1({}, {}), Node2({}, {}), index: {}, intersect point: {}".format(
                     #     edge, node1.position[0, 0], node1.position[0,1], node2.position[0, 0], node2.position[0, 1],
                     #     index, intersect_pt
                     # ))
+                    
         return intersections
 
     def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:
