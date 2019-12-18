@@ -16,9 +16,21 @@ class Point(uPoint):
     """
     Represents a point on a grid with x and y components
     """
+
     def __init__(self, x, y):
         super().__init__(x, y)
         self.adjacent_edges = dict()
+        self._is_on = False
+
+    @property
+    def is_on(self):
+        return self._is_on
+
+    def turn_off(self):
+        self._is_on = False
+
+    def turn_on(self):
+        self._is_on = True
 
     def add_edge(self, edge):
         '''
@@ -35,6 +47,7 @@ class GridCellEdge(uEdge):
     """
     Represents one of the sides / cell-edges in the grid.
     """
+
     def __init__(self, point1: Point, point2: Point) -> None:
         """
         Represents one grid cell edge (one of three components of a TriangeCell).
@@ -98,7 +111,7 @@ class Grid(object):
 
         # Image matrix after force and intensity function
         self.image_force = None
-        self.image_intensity = None
+        self.image_inflation_force = None
 
         # Simplex Grid Vars
         if scale >= 1:
@@ -203,9 +216,9 @@ class Grid(object):
         * (self.image.shape[0] by self.image.shape[1]) array of of intensities (values of 0 to 255)
         ========================
         """
-        if self.image_intensity is None:
-            self.image_intensity = img_inflation_force(self.image, threshold)
-        return self.image_intensity
+        if self.image_inflation_force is None:
+            self.image_inflation_force = img_inflation_force(self.image, threshold)
+        return self.image_inflation_force
 
     def get_closest_node(self, position: np.array) -> np.array:
         """
@@ -280,20 +293,23 @@ class Grid(object):
 
         return Point(intersection[0, 0], intersection[0, 1])
 
-    def _compute_intersection(self, snake: TSnake) -> [Point]:
+    def _compute_intersection(self, snake: TSnake) -> ([Point], {Point: GridCellEdge}):
         """
         Compute intersections between the grid and the snake in question
         Args:
         * snake: TSnake to compute intersections with
         Return:
         * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
+        * {Point:Edge}: Map of intersection points to edges they intersect with
         """
-        elements = snake.elements  # TODO: Add this function to snake after merge
+
+        elements = snake.elements
         intersections = []
-        intersect_set = set()
+        # All intersection points that have been found, mapped to edges they were found on
+        intersect_set = dict()
         for element in elements:
             # Get all edges surrounding each node, and check each for intersections
-            node1, node2 = element.nodes  # TODO: Add this function to snake after merge
+            node1, _ = element.nodes
             index = self.get_closest_node(node1.position)
             edges_to_check = self.get_cell_edges(index)
             for edge in edges_to_check:
@@ -301,7 +317,7 @@ class Grid(object):
                 if intersect_pt is not None and intersect_pt not in intersect_set:
                     intersections.append(intersect_pt)
                     edge.add_intersection(intersect_pt)
-                    intersect_set.add(intersect_pt)
+                    intersect_set[intersect_pt] = edge
                     # # NOTE: Code to debug intersection points, see known bug above
                     # if np.sum(intersect_pt.position - node1.position) == 0 or np.sum(intersect_pt.position - node2.position) == 0:
                     #     print("Following intersection goes through existing point:")
@@ -310,7 +326,7 @@ class Grid(object):
                     #     index, intersect_pt
                     # ))
 
-        return intersections
+        return (intersections, intersect_set)
 
     def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:
         """
@@ -320,9 +336,9 @@ class Grid(object):
         Return:
         * list(list(Point)) containing the intersection points for each snake
         """
-        return [self._compute_intersection(snake) for snake in snakes]
+        return [self._compute_intersection(snake)[0] for snake in snakes]
 
-    def reparameterize_phase_one(self, snakes: TSnakes):
+    def reparameterize_phase_one(self, snakes: [TSnake]) -> [TSnake]:
         '''
         Takes a list of T-Snakes and returns a new list of T-Snakes (which have possibly been split/merged/etc).
         If no snakes are split/merged, then the snakes are presented in the same order as before, AND
@@ -346,10 +362,20 @@ class Grid(object):
         '''
         new_snakes = []
         for snake in snakes:
-            intersections = self._compute_intersection(snake)
-            print('intersections:', intersections)
-
-            new_snakes.append(snake)
+            intersections, intersect_set = self._compute_intersection(snake)
+            print("Intersections:\n{}".format(intersections))
+            new_nodes = [Node(i.position[0,0], i.position[0,1])
+                              for i in intersections]
+            a, b, gamma, dt, q = snake.params
+            print("New Nodes:\n{}".format(new_nodes))
+            new_snake = TSnake(nodes=new_nodes, force=self.image_force,
+                intensity=self.image_inflation_force, a=a, b=b, q=q, gamma=gamma, dt=dt)
+            # print('intersections:', intersections)
+            # Compute intersections in counter-clockwise direction,
+            # so subsequent normal calculation is performed correctly.
+            # Create new snake nodes in same order as intersections were computed.
+            # Initialize snake in same order as intersections.
+            new_snakes.append(new_snake)
 
             # NOTE: Create new snake nodes in same order as intersections were computed.
             # Initialize snake in same order as intersections.

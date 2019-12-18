@@ -107,6 +107,7 @@ class TSnake(object):
         self.gamma = gamma
         self.dt = dt
         self.q = q
+        self.params = [self.a ,self.b ,self.gamma ,self.dt ,self.q]
 
         self._elements = []
 

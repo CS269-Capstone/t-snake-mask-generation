@@ -186,7 +186,7 @@ class UtilEdge(object):
         return '<{}, {}>'.format(str(self._point1), str(self._point2))
 
     def __repr__(self):
-        return self.__str__() + ':' + str(self.__hash__())
+        return self.__str__() # + ':' + str(self.__hash__())
 
     def __hash__(self):
         return hash(tuple(sorted([self._point1, self._point2])))
