@@ -22,15 +22,16 @@ class Point(uPoint):
     def __init__(self, x, y):
         super().__init__(x, y)
         self.adjacent_edges = dict()
-        self._is_on = False
+        self._is_on = False # Initialize to on because our snake shrinks 
         self.sign = None
 
     @property
     def is_on(self):
         return self._is_on
 
-    def turn_off(self):
-        self._is_on = False
+    # Once a node is on, it stays on
+    # def turn_off(self):
+    #     self._is_on = False
 
     def turn_on(self):
         self._is_on = True
@@ -78,17 +79,17 @@ class GridCellEdge(uEdge):
         ==========================================
         """
         # Get the minimum vertex of this grid cell edge
-        min_vertex = min(self._point1, self._point2)
+        max_vertex = max(self._point1, self._point2)
 
         # Get the direction from the intersect to the vertex
         plus_norm = point.position.reshape(-1) + element.normal
         minus_norm = point.position.reshape(-1) - element.normal
         
-        plus_dist = dist(plus_norm, min_vertex.position.reshape(-1))
-        minus_dist = dist(minus_norm, min_vertex.position.reshape(-1))
+        plus_dist = dist(plus_norm, max_vertex.position.reshape(-1))
+        minus_dist = dist(minus_norm, max_vertex.position.reshape(-1))
         
-        is_inside = plus_dist < minus_dist
-        if is_inside:
+        is_outside = plus_dist < minus_dist
+        if is_outside:
             point.sign = 1  # or -1? depending on the normal?
         else:
             point.sign = -1
@@ -99,10 +100,13 @@ class GridCellEdge(uEdge):
             self.intersections[-1] = point
         else:
             self.intersections = []
-        if is_inside:
-            return min_vertex
-        else:
-            return None
+        
+        return_val = None
+        if is_outside:
+            return_val = max_vertex
+            max_vertex.turn_on()
+
+        return return_val
 
     def find_intersection_point_with_element(self, element):
         """
@@ -449,13 +453,14 @@ class Grid(object):
         ===================================
         Returns:
         ===================================
-        * tuple([Tsnake], deque([Point])): 
+        * tuple([Tsnake], [deque([Point])]): 
         ** [Tsnake] is a list of the reparametrized TSnakes (same order if no splits or merges)
-        ** deque([Point]) is a queue of points in the ACID grid that will need to be processed in 
+        ** [deque([Point])] is a list of queue of points in the ACID grid that will need to be processed in 
         reparametrization phase II
         ===================================
         '''
         new_snakes = []
+        grid_node_queues = []
         for snake in snakes:
             intersections, grid_node_queue = self._compute_intersection(snake)
 
@@ -467,18 +472,53 @@ class Grid(object):
             force, intensity = snake.force, snake.intensity
             new_snake = TSnake(nodes=new_nodes, force=force,
                                intensity=intensity, a=a, b=b, q=q, gamma=gamma, dt=dt)
-            # print('intersections:', intersections)
-            # Compute intersections in counter-clockwise direction,
-            # so subsequent normal calculation is performed correctly.
-            # Create new snake nodes in same order as intersections were computed.
-            # Initialize snake in same order as intersections.
+
             new_snakes.append(new_snake)
+            grid_node_queues.append(grid_node_queue)
 
             # NOTE: Create new snake nodes in same order as intersections were computed.
             # Initialize snake in same order as intersections.
             # If the snake split, add the newly created snakes too.
 
-        return (new_snakes, grid_node_queue)
+        return (new_snakes, grid_node_queues)
+
+
+    def reparameterize_phase_two(self, snakes: [TSnake], grid_node_queues: [deque([Point])]) -> [TSnake]:
+        '''
+        Takes a list of ACID grid verticies found in reparameterize_phase_one()
+        and performs reparametrize phase two. It then returns a new list of T-Snakes (which have 
+        possibly been split/merged/etc). If no snakes are split/merged, then the snakes are 
+        presented in the same order as before, AND each snake's nodes are presented in the same order.
+        
+         Arguments:
+        ===================================
+        * grid_node_queues: list(deque([Point])) to be dequeued and processed, 1 for each
+        snake that was passed to reparametrize_phase_1
+        * snakes: List of the old Tsnakes
+        ===================================
+        Returns:
+        ===================================
+        * [Tsnake] is a list of the reparametrized TSnakes (same order if no splits or merges)
+        ===================================
+        '''
+        # Nodes that have just been turned on, i.e.
+        # new outside boundary of the snake
+        for grid_node_queue in grid_node_queues:
+            intersection_nodes = list(grid_node_queue) 
+            on_nodes = []
+            while grid_node_queue:
+                node = grid_node_queue.popleft()
+                if node.is_on:
+                    for edge in node.adjacent_edges:
+                        if len(edge.intersections) == 0:
+                            for p in edge.endpoints:
+                                if not p.is_on:
+                                    p.turn_on()
+                                    grid_node_queue.append(p)
+                    on_nodes.append(p)
+            
+
+
 
 
 if __name__ == '__main__':
