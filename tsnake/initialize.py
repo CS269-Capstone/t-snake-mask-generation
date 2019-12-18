@@ -59,7 +59,7 @@ def load_mask(path, convert=False):
         assert set(np.unique(image)) == {0, 255}, set(np.unique(image))
     else:
         # If the mask is hand-made and not perfect
-        image[image >= 128 ] = 255
+        image[image >= 128] = 255
         image[image < 128] = 0
     # Mask should be 3D
     assert len(image.shape) == 3
@@ -76,11 +76,13 @@ def load_mask(path, convert=False):
 # EXTRACT DISTINCT RECTANGULAR MASKED REGIONS
 # =====================================================
 
+
 class _Region(object):
     """
     A rectangular mask region.
     This class is used as an intermediate for building MaskedRegion objects.
     """
+
     def __init__(self):
         self.coords = set()
 
@@ -210,6 +212,7 @@ def compute_masked_regions(raw_image, raw_mask):
 # MaskedRegion
 # =====================================================
 
+
 class MaskedRegion(object):
     """
     A rectangular sub-region of the full image corresponding to one
@@ -234,6 +237,7 @@ class MaskedRegion(object):
       raw_mask_full[i, j] = 1    ===>    pixel (i, j) is masked
     =====================================================
     """
+
     def __init__(self, _region, raw_image_full, raw_mask_full):
         l, r, u, b = _region.bounding_box
 
@@ -285,11 +289,12 @@ class MaskedRegion(object):
             nodes = np.array(nodes).reshape(len(nodes), 2)
 
             norms = np.array(
-                [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes],
+                [[n.normal[1], n.normal[0]]
+                    for n in self._initial_tsnake.nodes],
                 dtype=np.float32
             )
             # multiply outward normals s they're easier to see
-            norms = norms.reshape(-1,2) * 6
+            norms = norms.reshape(-1, 2) * 6
 
             norms += nodes
             # How many terminal and initial nodes to show in different colors
@@ -300,7 +305,8 @@ class MaskedRegion(object):
             )
 
             # Visualize normals, and initial nodes (white), terminal nodes (yellow)
-            ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='white', s=3, alpha=0.9)
+            ax4.scatter(nodes[:buffer, 0], nodes[:buffer, 1],
+                        c='white', s=3, alpha=0.9)
             ax4.scatter(
                 nodes[-buffer:, 0], nodes[-buffer:, 1], c='yellow', s=3, alpha=0.9
             )
@@ -309,18 +315,19 @@ class MaskedRegion(object):
             for i in range(len(nodes)):
                 # Elements are plotted in red
                 ax4.plot(
-                    nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+                    nodes[[i-1, i], 0], nodes[[i-1, i], 1], c='red', lw=1, alpha=0.5
                 )
                 # Normals are plotted in green
                 ax4.plot(
-                    [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green',
+                    [nodes[i, 0], norms[i, 0]], [
+                        nodes[i, 1], norms[i, 1]], c='green',
                     lw=1, alpha=0.5
                 )
 
         plt.tight_layout()
         plt.show()
 
-    def show_snake(self, snake=None, save_fig='', figsize=(8, 8)):
+    def show_snake(self, snake=None, grid=None, save_fig='', figsize=(8, 8)):
         """
         Shows the current T-snake overlaid onto the (grayscale) image.
         """
@@ -340,27 +347,43 @@ class MaskedRegion(object):
             dtype=np.float32
         )
         # multiply outward normals so they're easier to see
-        norms = norms.reshape(-1,2) * 3
+        norms = norms.reshape(-1, 2) * 6
         norms += nodes
 
         f, ax = plt.subplots(figsize=figsize)
         ax.imshow(image, cmap=plt.cm.binary)
 
+        buffer = 3
         # Plot nodes
-        ax.scatter(nodes[:, 0], nodes[:, 1], c='red', s=3)
+        ax.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer, 1], c='red', s=3)
+        # Plot nodes
+        ax.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='magenta', s=10)
+        # Plot nodes
+        ax.scatter(nodes[-buffer:, 0], nodes[-buffer:, 1], c='blue', s=10)
         # Plot endpoints of the outward normals
-        ax.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.5)
+        ax.scatter(norms[:, 0], norms[:, 1], c='green', s=3, alpha=0.7)
 
         for i in range(len(nodes)):
             # Plot the elements
             ax.plot(
-                nodes[[i-1,i], 0], nodes[[i-1,i], 1], c='red', lw=1, alpha=0.5
+                nodes[[i-1, i], 0], nodes[[i-1, i], 1], c='red', lw=1, alpha=0.5
             )
             # Normals are plotted in green
             ax.plot(
-                [nodes[i,0], norms[i,0]], [nodes[i,1], norms[i,1]], c='green',
+                [nodes[i, 0], norms[i, 0]], [
+                    nodes[i, 1], norms[i, 1]], c='green',
                 lw=2, alpha=0.5
             )
+        if grid is not None:
+            # Plot the grid edges in blue
+            edges = grid.edges
+            for edge in edges:
+                p1, p2 = edge.endpoints
+                ax.plot(
+                    [p1.position[0, 1], p2.position[0, 1]],
+                    [p1.position[0, 0], p2.position[0, 0]],
+                    c='cyan', lw=1, alpha=0.3
+                )
         if save_fig == '':
             plt.show()
         else:
@@ -417,7 +440,7 @@ class MaskedRegion(object):
 
         # Pre-process sort to get right-handed spiral for normal init
         # This is necessary to get normal vectors to initialize properly
-        edge_pixels.sort(key=lambda x:(x[0], x[1]), reverse=True)
+        edge_pixels.sort(key=lambda x: (x[0], x[1]), reverse=True)
 
         step = int(np.floor(len(edge_pixels) / N))
         step = max(step, 1)
@@ -547,6 +570,7 @@ class MaskedRegion(object):
 # =====================================================
 # VISUALIZATION
 # =====================================================
+
 
 def visualize_masked_regions(raw_mask, regions, figsize=None):
     """
