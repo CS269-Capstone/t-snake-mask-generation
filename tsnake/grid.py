@@ -5,6 +5,7 @@ from .utils import UtilPoint as uPoint
 from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect, img_force, img_inflation_force
 from typing import List
+from scipy.spatial.distance import cdist
 TSnakes = List[TSnake]
 
 """
@@ -21,6 +22,7 @@ class Point(uPoint):
         super().__init__(x, y)
         self.adjacent_edges = dict()
         self._is_on = False
+        self.sign = None
 
     @property
     def is_on(self):
@@ -60,14 +62,19 @@ class GridCellEdge(uEdge):
         super().__init__(point1, point2)
         self.intersections = list()
 
-    def add_intersection(self, point: Point) -> None:
+    def add_intersection(self, point: Point, element: Element) -> None:
         """
         Store the intersection in the edge
         Args:
         -------------------------------
         * point: Point(), point object representing where the intersection occured
+        * element: Element(), element that the grid intersected with
         -------------------------------
         """
+        # TODO: I have the snake element (and normal) as well as the intersection point
+        # How do i determine what sign I should give it?
+        normal = element.normal
+        point.sign = 1 # or -1? depending on the normal?
         self.intersections.append(point)
 
     def find_intersection_point_with_element(self, element):
@@ -159,8 +166,8 @@ class Grid(object):
         m_steps = None
         n_steps = None
 
-        m_steps = int(self.m / self.scale)
-        n_steps = int(self.n / self.scale)
+        m_steps = int(self.m / self.scale) + 1
+        n_steps = int(self.n / self.scale) + 1
 
         self.grid = np.empty((m_steps, n_steps), dtype=object)
         for i in range(m_steps):
@@ -217,7 +224,8 @@ class Grid(object):
         ========================
         """
         if self.image_inflation_force is None:
-            self.image_inflation_force = img_inflation_force(self.image, threshold)
+            self.image_inflation_force = img_inflation_force(
+                self.image, threshold)
         return self.image_inflation_force
 
     def get_closest_node(self, position: np.array) -> np.array:
@@ -251,9 +259,13 @@ class Grid(object):
         ==========================================
         """
         edges = set()
-        for dx in [0, 1]:
-            for dy in [0, 1]:
-                pt = self.grid[index[0, 0]+dx, index[0, 1]+dy]
+        xlim, ylim = self.grid.shape
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                x, y = index[0, 0]+dx, index[0, 1]+dy
+                if x < 0 or x >= xlim or y < 0 or y >= ylim:
+                    continue
+                pt = self.grid[x, y]
                 for key in pt.adjacent_edges:
                     edges.add(pt.adjacent_edges[key])
         return edges
@@ -307,17 +319,29 @@ class Grid(object):
         intersections = []
         # All intersection points that have been found, mapped to edges they were found on
         intersect_set = dict()
+        checked_edges = set()
+
         for element in elements:
             # Get all edges surrounding each node, and check each for intersections
             node1, _ = element.nodes
             index = self.get_closest_node(node1.position)
-            edges_to_check = self.get_cell_edges(index)
-            for edge in edges_to_check:
+            edges_to_check = list(self.get_cell_edges(index))
+            while edges_to_check:
+                edge = edges_to_check.pop()
+
                 intersect_pt = self._get_element_intersection(element, edge)
                 if intersect_pt is not None and intersect_pt not in intersect_set:
                     intersections.append(intersect_pt)
-                    edge.add_intersection(intersect_pt)
+                    edge.add_intersection(intersect_pt, element)
                     intersect_set[intersect_pt] = edge
+                    checked_edges.add(edge)
+                    # Add all potential new edges to check to the stack
+                    # Duplicate intersections won't be added due to the above rule
+                    index = self.get_closest_node(intersect_pt.position)
+                    new_edges_to_check = list(self.get_cell_edges(index))
+                    for new_edge in new_edges_to_check:
+                        edges_to_check.append(new_edge)
+
                     # # NOTE: Code to debug intersection points, see known bug above
                     # if np.sum(intersect_pt.position - node1.position) == 0 or np.sum(intersect_pt.position - node2.position) == 0:
                     #     print("Following intersection goes through existing point:")
@@ -326,7 +350,45 @@ class Grid(object):
                     #     index, intersect_pt
                     # ))
 
-        return (intersections, intersect_set)
+        return (intersections, checked_edges)
+
+    def _sort_nodes(self, nodes):
+        # Pre-process sort to get right-handed spiral for normal init
+        # This is necessary to get normal vectors to initialize properly
+        # nodes.sort(key=lambda x: (x[0] + x[1], x[0], x[1]), reverse=True)
+
+        num_nodes = len(nodes)
+        node_locs = np.array(nodes).reshape(num_nodes, 2)
+
+        # Pull out arbitrary starting node
+        loc = node_locs[0]
+        node_locs = node_locs[1:]
+
+        ordered_nodes = [loc]
+        while len(ordered_nodes) < num_nodes:
+            # Find the node which is closest to the last node we processed
+            last = ordered_nodes[-1].reshape(1, 2)
+            # dists = distance from each remaining node to current node
+            dists = cdist(last, node_locs).reshape(-1, )
+
+            closest = dists.argmin()
+            ordered_nodes.append(node_locs[closest])
+            node_locs = np.delete(node_locs, obj=closest, axis=0)
+        
+        # Source: https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
+        temp = np.array(ordered_nodes).reshape(-1,2)
+        x = temp[:,0].reshape(-1)
+        y = temp[:,1].reshape(-1)
+        xs, ys = np.zeros(x.shape), np.zeros(y.shape)
+        for i in range(x.shape[0]):
+            xs[i] = x[i] - x[i-1]
+            ys[i] = y[i] + y[i-1]
+        
+        orientation = np.sum(xs*ys)
+        if orientation < 0:
+            ordered_nodes = ordered_nodes[::-1]
+        
+        return ordered_nodes
 
     def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:
         """
@@ -362,14 +424,18 @@ class Grid(object):
         '''
         new_snakes = []
         for snake in snakes:
-            intersections, intersect_set = self._compute_intersection(snake)
-            print("Intersections:\n{}".format(intersections))
-            new_nodes = [Node(i.position[0,0], i.position[0,1])
-                              for i in intersections]
+            intersections, checked_edges = self._compute_intersection(snake)
+            
+            
+
+            new_nodes = [[i.position[0, 0], i.position[0, 1]]
+                         for i in intersections]
+            new_nodes = self._sort_nodes(new_nodes)
+            new_nodes = [Node(x[0], x[1]) for x in new_nodes]
             a, b, gamma, dt, q = snake.params
-            print("New Nodes:\n{}".format(new_nodes))
+            
             new_snake = TSnake(nodes=new_nodes, force=self.image_force,
-                intensity=self.image_inflation_force, a=a, b=b, q=q, gamma=gamma, dt=dt)
+                               intensity=self.image_inflation_force, a=a, b=b, q=q, gamma=gamma, dt=dt)
             # print('intersections:', intersections)
             # Compute intersections in counter-clockwise direction,
             # so subsequent normal calculation is performed correctly.
