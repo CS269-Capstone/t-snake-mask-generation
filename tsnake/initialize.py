@@ -351,11 +351,28 @@ class MaskedRegion(object):
         norms += nodes
 
         f, ax = plt.subplots(figsize=figsize)
-        ax.imshow(image, cmap=plt.cm.binary)
+        # ax.imshow(image, cmap=plt.cm.binary)
+
+        force_plot = np.zeros((snake.force.shape[0], snake.force.shape[1], 3))
+        force_plot[:, :, :snake.force.shape[-1]] = snake.force
+        # Normalize float values
+        mx, mn = np.max(force_plot), np.min(force_plot)
+        # audio /= np.max(np.abs(audio),axis=0)
+        force_plot = (force_plot - np.min(force_plot))/np.ptp(force_plot)
+        # force_plot = 0.5 + (force_plot / (mx - mn))
+        mx, mn = np.max(force_plot), np.min(force_plot)
+        assert mn >= 0 and mx <= 1, "Forces didn't normalize properly, max={}, min={}".format(mx, mn)
+
+        intensity_normalized = 0.25 * (1 + snake.intensity)
+        mx, mn = np.max(intensity_normalized), np.min(intensity_normalized)
+        assert mn >= 0 and mx <= 1, "Inflation Forces didn't normalize properly, max={}, min={}".format(mx, mn)
+        force_plot[:, :, snake.force.shape[-1]] = intensity_normalized
+        ax.imshow(force_plot)
 
         buffer = 3
         # Plot nodes
-        ax.scatter(nodes[buffer:-buffer, 0], nodes[buffer:-buffer, 1], c='red', s=3)
+        ax.scatter(nodes[buffer:-buffer, 0],
+                   nodes[buffer:-buffer, 1], c='red', s=3)
         # Plot nodes
         ax.scatter(nodes[:buffer, 0], nodes[:buffer, 1], c='magenta', s=10)
         # Plot nodes

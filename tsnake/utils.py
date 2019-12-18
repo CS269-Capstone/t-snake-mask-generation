@@ -25,7 +25,10 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     ========================
     """
     image_intensity = np.copy(image)
-    mask = image_intensity < threshold
+    std = np.std(image_intensity)
+    mean = np.mean(image_intensity)
+
+    mask = np.abs(image_intensity - mean) < threshold*std
     image_intensity[mask] = -1
     image_intensity[~mask] = 1
     return image_intensity

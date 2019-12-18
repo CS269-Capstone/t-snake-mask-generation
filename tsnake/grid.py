@@ -464,9 +464,9 @@ class Grid(object):
             new_nodes = self._sort_nodes(new_nodes)
             new_nodes = [Node(x[0], x[1]) for x in new_nodes]
             a, b, gamma, dt, q = snake.params
-
-            new_snake = TSnake(nodes=new_nodes, force=self.image_force,
-                               intensity=self.image_inflation_force, a=a, b=b, q=q, gamma=gamma, dt=dt)
+            force, intensity = snake.force, snake.intensity
+            new_snake = TSnake(nodes=new_nodes, force=force,
+                               intensity=intensity, a=a, b=b, q=q, gamma=gamma, dt=dt)
             # print('intersections:', intersections)
             # Compute intersections in counter-clockwise direction,
             # so subsequent normal calculation is performed correctly.
