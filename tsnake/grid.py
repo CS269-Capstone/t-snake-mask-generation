@@ -336,7 +336,7 @@ class Grid(object):
 
         return Point(intersection[0, 0], intersection[0, 1])
 
-    def _compute_intersection(self, snake: TSnake) -> ([Point], deque([Point])):
+    def _compute_intersection(self, snake: TSnake) -> ([GridCellEdge], deque([Point])):
         """
         Compute intersections between the grid and the snake in question
         Args:
@@ -345,7 +345,7 @@ class Grid(object):
         * [Point]: contains all found intersection points. 
         These points already have points resulting from multiple
         intersections on the same edge removed
-        * deque(GridCellEdge): Queue of GridCell Edges inside of snake for
+        * deque([Point]): Queue of Points outside of the shrunken snake for
         processing in reparametrization phase 2
         """
 
