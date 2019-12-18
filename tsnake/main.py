@@ -151,7 +151,7 @@ class Main(object):
                 # 2) the reparameterization (occuring every M deformation steps)
                 for snake in snakes:
                     snake.m_step(M)
-                new_snakes = grid.reparameterize(snakes)
+                new_snakes = grid.reparameterize_phase_one(snakes)
 
                 # =======================================
                 # CHECK FOR CONVERGENCE =================

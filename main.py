@@ -60,8 +60,8 @@ if __name__ == '__main__':
     n_inter_for_each_t_snake = [len(inter) for inter in intersections]
     print('num of intersections for each t-snake:', n_inter_for_each_t_snake)
 
+    # ----------------- Test T-Snake Evolution and Reparam -----------------
     regions[1].show_snake(save_fig='images/img0.png')
-    # Test snake evolution
     iterations = 1 # dummy value for testing purposes
     M = 5
     # Pick just one (for testing purposes) of the snakes on the grid
@@ -73,6 +73,6 @@ if __name__ == '__main__':
     for j in tqdm(range(iterations)):
         for snake in snakes:
             snake.m_step(M)
-        new_snakes = grid.reparameterize(snakes)
+        new_snakes = grid.reparameterize_phase_one(snakes)
 
         regions[1].show_snake(save_fig='images/img{}.png'.format(j+1))
