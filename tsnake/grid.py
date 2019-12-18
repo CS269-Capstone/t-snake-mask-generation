@@ -322,25 +322,39 @@ class Grid(object):
         """
         return [self._compute_intersection(snake) for snake in snakes]
 
-    def reparameterize(self, snakes: TSnakes):
+    def reparameterize_phase_one(self, snakes: TSnakes):
         '''
-        Takes a list of T-Snakes and returns a new list of T-Snakes
-        (which have possibly been split/merged/etc).
-        If no snakes are split/merged, then:
-        1) the snakes are presented in the same order as before, AND
-        2) each snake's nodes are presented in the same order.
+        Takes a list of T-Snakes and returns a new list of T-Snakes (which have possibly been split/merged/etc).
+        If no snakes are split/merged, then the snakes are presented in the same order as before, AND
+        each snake's nodes are presented in the same order.
+
+        Reparameterization Phase I has 3 key parts:
+        1) Compute intersections in counter-clockwise direction so normal calculation is performed correctly
+            NOTE: intersection points can:
+            a) become a node of the updated T-Snake, or
+            b) be discarded if, after reparam phase II, both grid vertices of the grid cell edge are 'off',
+            meaning that both grid vertices are outside the T-Snake
+        2) If more than 1 intersection point is found for a grid cell edge, take the lower-numbered
+        vertex of the grid edge and see if it is inside or outside the T-Snake (using normal as reference).
+        (This requires labeling all computed intersection points from self._compute_intersection with a + or - sign.
+        Computed intersection points are compared with the existing intersection point for an edge (if any),
+        and if different signs, they cancel each other out (do nothing), and if same signs, new intersection point
+        (TODO: which new intersection point if there are multiple?) replaces existing one.
+
+        3) If a grid vertex on the outside half-space of the T-Snake element is "on", we store it in a
+        queue for processing in phase II.
         '''
         new_snakes = []
         for snake in snakes:
-            # Compute intersections in counter-clockwise direction,
-            # so subsequent normal calculation is performed correctly.
             intersections = self._compute_intersection(snake)
             print('intersections:', intersections)
 
-            # Create new snake nodes in same order as intersections were computed.
-            # Initialize snake in same order as intersections.
             new_snakes.append(snake)
+
+            # NOTE: Create new snake nodes in same order as intersections were computed.
+            # Initialize snake in same order as intersections.
             # If the snake split, add the newly created snakes too.
+
         return new_snakes
 
 
