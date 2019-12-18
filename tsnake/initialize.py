@@ -320,25 +320,27 @@ class MaskedRegion(object):
         plt.tight_layout()
         plt.show()
 
-    def show_snake(self, save_fig='', figsize=(8, 8)):
+    def show_snake(self, snake=None, save_fig='', figsize=(8, 8)):
         """
         Shows the current T-snake overlaid onto the (grayscale) image.
         """
         image = self.raw_image_portion
-        if self._initial_tsnake is None:
-            raise ValueError('T-snake has not been initialized.')
+        if snake is None:
+            if self._initial_tsnake is None:
+                raise ValueError('T-snake has not been initialized.')
 
-        snake = self._initial_tsnake
+            snake = self._initial_tsnake
+
         # positions of the snake nodes
-        nodes = [[n.y, n.x] for n in self._initial_tsnake.nodes]
+        nodes = [[n.y, n.x] for n in snake.nodes]
         nodes = np.array(nodes).reshape(len(nodes), 2)
         # outward normals for each node
         norms = np.array(
-            [[n.normal[1], n.normal[0]] for n in self._initial_tsnake.nodes],
+            [[n.normal[1], n.normal[0]] for n in snake.nodes],
             dtype=np.float32
         )
         # multiply outward normals so they're easier to see
-        norms = norms.reshape(-1,2) * 6
+        norms = norms.reshape(-1,2) * 3
         norms += nodes
 
         f, ax = plt.subplots(figsize=figsize)
@@ -364,6 +366,7 @@ class MaskedRegion(object):
         else:
             plt.savefig(save_fig)
             plt.clf()
+            plt.close()
 
     def initialize_tsnake(
         self, N, p, c, sigma, a, b, q, gamma, dt, threshold=100, verbose=False
