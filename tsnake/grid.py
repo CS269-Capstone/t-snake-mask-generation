@@ -6,6 +6,7 @@ from .utils import UtilEdge as uEdge
 from .utils import dist, seg_intersect, img_force, img_inflation_force
 from typing import List
 from scipy.spatial.distance import cdist
+from collections import deque
 TSnakes = List[TSnake]
 
 """
@@ -62,7 +63,7 @@ class GridCellEdge(uEdge):
         super().__init__(point1, point2)
         self.intersections = list()
 
-    def add_intersection(self, point: Point, element: Element) -> None:
+    def add_intersection(self, point: Point, element: Element) -> Point:
         """
         Store the intersection in the edge
         Args:
@@ -70,12 +71,38 @@ class GridCellEdge(uEdge):
         * point: Point(), point object representing where the intersection occured
         * element: Element(), element that the grid intersected with
         -------------------------------
+        Return:
+        ==========================================
+        * Point, the vertex in the ACID grid if if is inside the snake, 
+        else None if it is not inside the snake
+        ==========================================
         """
-        # TODO: I have the snake element (and normal) as well as the intersection point
-        # How do i determine what sign I should give it?
-        normal = element.normal
-        point.sign = 1 # or -1? depending on the normal?
-        self.intersections.append(point)
+        # Get the minimum vertex of this grid cell edge
+        min_vertex = min(self._point1, self._point2)
+
+        # Get the direction from the intersect to the vertex
+        plus_norm = point.position.reshape(-1) + element.normal
+        minus_norm = point.position.reshape(-1) - element.normal
+        
+        plus_dist = dist(plus_norm, min_vertex.position.reshape(-1))
+        minus_dist = dist(minus_norm, min_vertex.position.reshape(-1))
+        
+        is_inside = plus_dist < minus_dist
+        if is_inside:
+            point.sign = 1  # or -1? depending on the normal?
+        else:
+            point.sign = -1
+        
+        if not self.intersections:
+            self.intersections.append(point)
+        elif self.intersections[-1].sign == point.sign:
+            self.intersections[-1] = point
+        else:
+            self.intersections = []
+        if is_inside:
+            return min_vertex
+        else:
+            return None
 
     def find_intersection_point_with_element(self, element):
         """
@@ -305,18 +332,22 @@ class Grid(object):
 
         return Point(intersection[0, 0], intersection[0, 1])
 
-    def _compute_intersection(self, snake: TSnake) -> ([Point], {Point: GridCellEdge}):
+    def _compute_intersection(self, snake: TSnake) -> ([Point], deque([Point])):
         """
         Compute intersections between the grid and the snake in question
         Args:
         * snake: TSnake to compute intersections with
         Return:
-        * [Point]: contains all found intersection points. These points are also added to the intersection points of the edge
-        * {Point:Edge}: Map of intersection points to edges they intersect with
+        * [Point]: contains all found intersection points. 
+        These points already have points resulting from multiple
+        intersections on the same edge removed
+        * deque(GridCellEdge): Queue of GridCell Edges inside of snake for
+        processing in reparametrization phase 2
         """
 
         elements = snake.elements
         intersections = []
+        grid_node_queue = deque()
         # All intersection points that have been found, mapped to edges they were found on
         intersect_set = dict()
         checked_edges = set()
@@ -331,10 +362,13 @@ class Grid(object):
 
                 intersect_pt = self._get_element_intersection(element, edge)
                 if intersect_pt is not None and intersect_pt not in intersect_set:
-                    intersections.append(intersect_pt)
-                    edge.add_intersection(intersect_pt, element)
+                    # intersections.append(intersect_pt)
+                    grid_node = edge.add_intersection(intersect_pt, element)
+                    if grid_node is not None:
+                        grid_node_queue.append(grid_node)
                     intersect_set[intersect_pt] = edge
                     checked_edges.add(edge)
+
                     # Add all potential new edges to check to the stack
                     # Duplicate intersections won't be added due to the above rule
                     index = self.get_closest_node(intersect_pt.position)
@@ -350,7 +384,10 @@ class Grid(object):
                     #     index, intersect_pt
                     # ))
 
-        return (intersections, checked_edges)
+        for edge in checked_edges:
+            for point in edge.intersections:
+                intersections.append(point)
+        return (intersections, grid_node_queue)
 
     def _sort_nodes(self, nodes):
         # Pre-process sort to get right-handed spiral for normal init
@@ -374,20 +411,20 @@ class Grid(object):
             closest = dists.argmin()
             ordered_nodes.append(node_locs[closest])
             node_locs = np.delete(node_locs, obj=closest, axis=0)
-        
+
         # Source: https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
-        temp = np.array(ordered_nodes).reshape(-1,2)
-        x = temp[:,0].reshape(-1)
-        y = temp[:,1].reshape(-1)
+        temp = np.array(ordered_nodes).reshape(-1, 2)
+        x = temp[:, 0].reshape(-1)
+        y = temp[:, 1].reshape(-1)
         xs, ys = np.zeros(x.shape), np.zeros(y.shape)
         for i in range(x.shape[0]):
             xs[i] = x[i] - x[i-1]
             ys[i] = y[i] + y[i-1]
-        
+
         orientation = np.sum(xs*ys)
         if orientation < 0:
             ordered_nodes = ordered_nodes[::-1]
-        
+
         return ordered_nodes
 
     def get_snake_intersections(self, snakes: TSnakes) -> [[Point]]:
@@ -400,40 +437,34 @@ class Grid(object):
         """
         return [self._compute_intersection(snake)[0] for snake in snakes]
 
-    def reparameterize_phase_one(self, snakes: [TSnake]) -> [TSnake]:
+    def reparameterize_phase_one(self, snakes: [TSnake]) -> ([TSnake], deque([Point])):
         '''
         Takes a list of T-Snakes and returns a new list of T-Snakes (which have possibly been split/merged/etc).
         If no snakes are split/merged, then the snakes are presented in the same order as before, AND
         each snake's nodes are presented in the same order.
-
-        Reparameterization Phase I has 3 key parts:
-        1) Compute intersections in counter-clockwise direction so normal calculation is performed correctly
-            NOTE: intersection points can:
-            a) become a node of the updated T-Snake, or
-            b) be discarded if, after reparam phase II, both grid vertices of the grid cell edge are 'off',
-            meaning that both grid vertices are outside the T-Snake
-        2) If more than 1 intersection point is found for a grid cell edge, take the lower-numbered
-        vertex of the grid edge and see if it is inside or outside the T-Snake (using normal as reference).
-        (This requires labeling all computed intersection points from self._compute_intersection with a + or - sign.
-        Computed intersection points are compared with the existing intersection point for an edge (if any),
-        and if different signs, they cancel each other out (do nothing), and if same signs, new intersection point
-        (TODO: which new intersection point if there are multiple?) replaces existing one.
-
-        3) If a grid vertex on the outside half-space of the T-Snake element is "on", we store it in a
-        queue for processing in phase II.
+        
+         Arguments:
+        ===================================
+        * snakes: List of TSnakes to be reparametrized
+        ===================================
+        Returns:
+        ===================================
+        * tuple([Tsnake], deque([Point])): 
+        ** [Tsnake] is a list of the reparametrized TSnakes (same order if no splits or merges)
+        ** deque([Point]) is a queue of points in the ACID grid that will need to be processed in 
+        reparametrization phase II
+        ===================================
         '''
         new_snakes = []
         for snake in snakes:
-            intersections, checked_edges = self._compute_intersection(snake)
-            
-            
+            intersections, grid_node_queue = self._compute_intersection(snake)
 
             new_nodes = [[i.position[0, 0], i.position[0, 1]]
                          for i in intersections]
             new_nodes = self._sort_nodes(new_nodes)
             new_nodes = [Node(x[0], x[1]) for x in new_nodes]
             a, b, gamma, dt, q = snake.params
-            
+
             new_snake = TSnake(nodes=new_nodes, force=self.image_force,
                                intensity=self.image_inflation_force, a=a, b=b, q=q, gamma=gamma, dt=dt)
             # print('intersections:', intersections)
@@ -447,7 +478,7 @@ class Grid(object):
             # Initialize snake in same order as intersections.
             # If the snake split, add the newly created snakes too.
 
-        return new_snakes
+        return (new_snakes, grid_node_queue)
 
 
 if __name__ == '__main__':
