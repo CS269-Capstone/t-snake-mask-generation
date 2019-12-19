@@ -81,14 +81,20 @@ class GridCellEdge(uEdge):
         # Get the minimum vertex of this grid cell edge
         max_vertex = max(self._point1, self._point2)
 
+        length = dist(self._point1.position.reshape(-1),
+                      self._point2.position.reshape(-1))
+
         # Get the direction from the intersect to the vertex
-        plus_norm = point.position.reshape(-1) + element.normal
-        minus_norm = point.position.reshape(-1) - element.normal
+
+        scaled_norm = element.normal * 0.5 * length
+        plus_norm = point.position.reshape(-1) + scaled_norm
+        minus_norm = point.position.reshape(-1) - scaled_norm
+
 
         plus_dist = dist(plus_norm, max_vertex.position.reshape(-1))
         minus_dist = dist(minus_norm, max_vertex.position.reshape(-1))
 
-        is_outside = plus_dist > minus_dist
+        is_outside = plus_dist < minus_dist
         if is_outside:
             point.sign = 1  # or -1? depending on the normal?
         else:
@@ -374,7 +380,7 @@ class Grid(object):
                     grid_node = edge.add_intersection(intersect_pt, element)
                     if grid_node is not None:
                         x, y = int(grid_node.x), int(grid_node.y)
-                        self.grid[x, y].turn_on()
+                        # self.grid[x, y].turn_on()
                         grid_node_queue.append(self.grid[x, y])
                     intersect_set[intersect_pt] = edge
                     checked_edges.add(edge)
@@ -399,6 +405,17 @@ class Grid(object):
             for point in edge.intersections:
                 x, y = int(point.x), int(point.y)
                 intersections.append(self.grid[x, y])
+
+        for i in range(len(grid_node_queue)):
+            node = grid_node_queue[i]
+            x, y = int(node.x), int(node.y)
+            for edge in self.grid[x, y].adjacent_edges:
+                edge = self.edges[edge]
+                if len(edge.intersections) > 0:
+                    # This grid was previously inside and is now outside
+                    self.grid[x, y].turn_on()
+                    break
+
         return (intersections, grid_node_queue)
 
     def _sort_nodes(self, nodes):
@@ -516,6 +533,8 @@ class Grid(object):
             on_nodes = []
             processed = set()
             blocked_edges = 0
+            iters = 0
+            temp_queue = []
             while grid_node_queue:
                 node = grid_node_queue.popleft()
                 x, y = int(node.x), int(node.y)
@@ -530,11 +549,15 @@ class Grid(object):
                                 if not p.is_on:
                                     x, y = int(p.x), int(p.y)
                                     self.grid[x, y].turn_on()
-                                    grid_node_queue.append(self.grid[x, y])
+                                    # grid_node_queue.append(self.grid[x, y])
+                                    temp_queue.append(self.grid[x, y])
                         else:
                             blocked_edges += 1
-                    on_nodes.append(p)
-            
+                    on_nodes.append(node)
+                if len(grid_node_queue) == 0 and iters < 0:
+                    iters += 1
+                    grid_node_queue = deque(temp_queue)
+
             total_nodes = self.grid.shape[0] * self.grid.shape[1]
             print("total blocked edges = {}".format(blocked_edges))
             print(
