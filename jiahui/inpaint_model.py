@@ -13,9 +13,9 @@ from neuralgym.ops.layers import flatten, resize
 from neuralgym.ops.gan_ops import gan_hinge_loss
 from neuralgym.ops.gan_ops import random_interpolates
 
-from inpaint_ops import gen_conv, gen_deconv, dis_conv
-from inpaint_ops import random_bbox, bbox2mask, local_patch, brush_stroke_mask
-from inpaint_ops import resize_mask_like, contextual_attention
+from .inpaint_ops import gen_conv, gen_deconv, dis_conv
+from .inpaint_ops import random_bbox, bbox2mask, local_patch, brush_stroke_mask
+from .inpaint_ops import resize_mask_like, contextual_attention
 
 
 logger = logging.getLogger()
