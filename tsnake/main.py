@@ -2,28 +2,17 @@
 Main entry point for the project.
 """
 import warnings
+from copy import deepcopy
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 
-import jiahui
 import tsnake.initialize as init
 import tsnake.utils as utils
 from tsnake.grid import Grid
-
-
-# class SubImage(object):
-#     """
-#     This class represents a 'sub-image', which corresponds to one of the
-#     `MaskedRegion` objects constructed in initialize.py.
-
-#     For this sub-image / sub-region of the full image, this class owns
-#     the Grid and T-snake instances.
-#     """
-
-#     def __init__(self, masked_region):
-#         self.masked_region = masked_region
+# from jiahui.inpaint import inpaint as j_inpaint
 
 
 class Main(object):
@@ -73,31 +62,34 @@ class Main(object):
         if which_mask == 'snake' and self.snake_mask is None:
             msg = 'T-snake has not been run yet - please call Main.run() first.'
             raise ValueError(msg)
-
-        if which_mask == 'user':
-            output = jiahui.inpaint.inpaint(self.color_image, self.user_mask)
-            self.user_output_image = output
-        else:
-            output = jiahui.inpaint.inpaint(self.color_image, self.snake_mask)
-            self.snake_output_image = output
+        
+        # inpainting no longer works :( 
+#         if which_mask == 'user':
+#             output = j_inpaint(self.color_image, self.user_mask)
+#             self.user_output_image = output
+#         else:
+#             output = j_inpaint(self.color_image, self.snake_mask)
+#             self.snake_output_image = output
 
         return output
 
     def _snakes_to_mask(self, snakes):
         """
         Take a list of snakes, and return an np array denoting a mask
+        
         Args:
         =======================
-        * snakes: list(TSnake), list of all converged tsnakes for the image
+        * snakes: list(TSnake): list of all converged snakes for the image.
         =======================
-        Return:
+        
+        Returns:
         =======================
-        * mask: np.array containing the mask as 0s and 1s
+        * mask: np.array containing the binary mask M \in {0, 255}^{n \times m}
         =======================
         """
         assert isinstance(self.grid, Grid), 'Grid should have been initialized, but was not'
 
-        mask = np.zeros(self.grayscale_image.shape)
+        mask = np.zeros(self.grayscale_image.shape, dtype=np.int)
         simplex_grid = Grid(image=self.grayscale_image, scale=1)
         simplex_grid.gen_simplex_grid()
         _ , grid_node_queues = simplex_grid.reparameterize_phase_one(snakes)
@@ -106,10 +98,15 @@ class Main(object):
         grid = simplex_grid.grid
 
         n, m = mask.shape
+        are_on = 0
         for i in range(n):
             for j in range(m):
+                if grid[i, j].is_on:
+                    are_on += 1
                 mask[i, j] = 255 if grid[i, j].is_on else 0
 
+        total_num_nodes = n * m
+        print("Main found [{}/{}] nodes to be on".format(are_on, total_num_nodes))
         return mask
 
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
@@ -153,6 +150,8 @@ class Main(object):
         to_finish = set(list(range(len(self.masked_regions))))
         iter_num = 0
         while len(to_finish) > 0 and iter_num < max_iter:
+            to_discard = set()
+            
             for r_num in to_finish:
                 grid = self.grid
                 snakes = self.snakes[r_num]
@@ -186,13 +185,15 @@ class Main(object):
                 # has moved by no more than `tolerance`
                 for s in range(len(snakes)):
                     # check if any nodes have moved by more than `tolerance`
-                    if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance]):
+                    if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance for i in range(len(snakes[s].nodes))]):
                         converged = False
                         break
 
                 self.snakes[r_num] = new_snakes
                 if converged:
-                    to_finish.discard(r_num)
+                    to_discard.add(r_num)
+                    
+            to_finish = to_finish.difference(to_discard)
             iter_num += 1
 
         if len(to_finish) > 0:
@@ -201,52 +202,104 @@ class Main(object):
         # ====================================================
         # EXTRACT THE RESULTING IMAGE ========================
         # ====================================================
-        all_snakes = []
-        for snake_list in self.snakes:
-            for s in snake_list:
-                all_snakes.append(s)
-
+        # First, make sure the snake node coordinates are 
+        # consistent with the *full* image 
+        # (as they evolve in the coordinate system of their 
+        # respective MaskedRegions)
+        all_snakes = self.process_snakes_for_mask_generation()
         self.snake_mask = self._snakes_to_mask(all_snakes)
-        self.snake_output_image = self._inpaint('snake')
-        self.user_output_image = self._inpaint('user')
-        raise NotImplementedError    # TODO
-
-
-    def compare_inpainted_images(self, ground_truth=None, figsize=(15, 5)):
-        # If no ground truth image given, assume ground truth is 'self.color_image'
-        if ground_truth is None:
-            ground_truth = self.color_image
-        else:
-            assert ground_truth.shape == self.color_image.shape
-
-        assert self.user_output_image is not None, 'please call Main.run()'
-        assert self.snake_output_image is not None, 'please call Main.run()'
-
-        user_img = self.user_output_image
-        snake_img = self.snake_output_image
-
-        user_l1 = np.sum(np.abs(ground_truth - self.user_output_image))
-        snake_l1 = np.sum(np.abs(ground_truth - self.snake_output_image))
-
-        user_l2 = np.sum((ground_truth - self.user_output_image)**2)
-        snake_l2 = np.sum((ground_truth - self.snake_output_image)**2)
+        # self.snake_output_image = self._inpaint('snake')
+        # self.user_output_image = self._inpaint('user')
+        return self.snake_mask
+    
+    def process_snakes_for_mask_generation(self):
+        """
+        For each snake in self.snakes, goes through and returns a copy
+        of each with its coordinate system changed to be consistent 
+        with the entire image.
+        (Each snake evolves in a coordinate system defined by its 
+         respective MaskedRegion)
+         
+        Returns the snakes in a flattened list.
+        """
+        all_snakes = []
+        for r_num in range(len(self.masked_regions)):
+            snake_list = deepcopy(self.snakes[r_num])
+            region = self.masked_regions[r_num]
+            
+            top_row = region.top_row
+            left_col = region.left_col
+            
+            for snake in snake_list:
+                for node in snake.nodes:
+                    x, y = node.x, node.y
+                    x += top_row
+                    y += left_col
+                    node.update(x, y)
+                    
+                all_snakes.append(snake)
+                
+        return all_snakes
+    
+    def compare_masks(self, figsize=(15, 5), show_snakes=True):
+        # ==========================================================
+        # Compute the number of masked pixels per mask
+        # number of masked pixels
+        npm_user = np.argwhere(self.user_mask != 0).shape[0]
+        npm_snake = np.argwhere(self.snake_mask != 0).shape[0]
+        
+        pct_reduction = (npm_user - npm_snake) / npm_user
+        # ==========================================================
 
         f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize)
-        ax1.set_title('Ground truth image')
-        ax2.set_title(
-            'Inpainted w/ user-defined mask (L1=%f, L2=%f)' % (user_l1, user_l2)
-        )
-        ax3.set_title(
-            'Inpainted w/ snake-defined mask (L1=%f, L2=%f)' % (snake_l1, snake_l2)
-        )
+        f.suptitle('Percent reduction in masked pixels: %f' % pct_reduction)
+        ax1.set_title('Original image')
+        ax2.set_title('User-defined mask (NPM=%d)' % npm_user)
+        ax3.set_title('Snake-defined mask (NPM=%d)' % npm_snake)
 
         # https://www.pyimagesearch.com/2014/11/03/display-matplotlib-rgb-image/
-        ax1.imshow(cv2.cvtColor(ground_truth, cv2.COLOR_BGR2RGB))
-        ax2.imshow(cv2.cvtColor(self.user_output_image, cv2.COLOR_BGR2RGB))
-        ax3.imshow(cv2.cvtColor(self.snake_output_image, cv2.COLOR_BGR2RGB))
+        ax1.imshow(cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB))
+        ax2.imshow(self.user_mask, cmap=plt.cm.binary)
+        ax3.imshow(self.snake_mask, cmap=plt.cm.binary)
+        
+        if show_snakes:
+            all_snakes = self.process_snakes_for_mask_generation()
+            for snake in all_snakes:
+                node_locs = snake.node_locations
+                
+                ax1.plot(
+                    node_locs[:, 1], node_locs[:, 0], color='red', marker='x'
+                )
+                
+        
+        plt.show()
 
-        return [(user_l1, user_l2), (snake_l1, snake_l2)]
+        
 
 
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 if __name__ == '__main__':
     pass
+
+
+
+
+
+
+
+
+
+
+

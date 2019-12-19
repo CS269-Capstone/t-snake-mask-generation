@@ -1,7 +1,5 @@
-# GAN inpainting code only works for these tf versions
-tensorflow>=1.3.0, <=1.7.0
-
-cv2
+tensorflow
+opencv-python
 matplotlib
 neuralgym
 numpy

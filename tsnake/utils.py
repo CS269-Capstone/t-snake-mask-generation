@@ -5,8 +5,7 @@ from scipy.ndimage import gaussian_filter
 Module containing utilities and base classes to be shared by Snake and Grid
 """
 
-
-def img_inflation_force(image: np.array, threshold: int) -> np.array:
+def img_inflation_force(image: np.array, k: float) -> np.array:
     """
     Compute the inflationary force F(I(x, y)), equation (5) from the paper, for
     every integer-index (x, y) of the image.
@@ -15,8 +14,8 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     (np.array) image:
     * A np.array of shape (n, m) containing the grayscale image.
 
-    (int) threshold:
-    * Threshold value, intensities above this result in 1, else -1, from equation (5)
+    (float) k:
+    * See equation (6)
     ========================
     Returns:
     ========================
@@ -28,7 +27,7 @@ def img_inflation_force(image: np.array, threshold: int) -> np.array:
     std = np.std(image_intensity)
     mean = np.mean(image_intensity)
 
-    mask = np.abs(image_intensity - mean) < threshold*std
+    mask = np.abs(image_intensity - mean) < k*std
     image_intensity[mask] = -1
     image_intensity[~mask] = 1
     return image_intensity

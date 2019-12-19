@@ -409,7 +409,7 @@ class MaskedRegion(object):
             plt.close()
 
     def initialize_tsnake(
-        self, N, p, c, sigma, a, b, q, gamma, dt, threshold=100, verbose=False
+        self, N, p, c, sigma, a, b, q, gamma, dt, k=1, verbose=False
     ):
         """
         Initializes a T-snake by placing the initial nodes along
@@ -435,6 +435,10 @@ class MaskedRegion(object):
         * The hyperparameter q from Equations (4).
         (float) gamma:
         * The hyperparameter gamma from Equations (1), (8).
+        (float) dt:
+        * The step size in Equation (8).
+        (float) k:
+        * The parameter k in Equation (6).
         (bool) verbose:
         * Set to True to print extra information.
         =====================================================
@@ -482,7 +486,7 @@ class MaskedRegion(object):
         # memory overhead that way, and it makes more sense for subsequent steps
         force_grid = self.compute_force_grid(sigma, c, p)
 
-        intensity_grid = img_inflation_force(self.raw_image_portion, threshold)
+        intensity_grid = img_inflation_force(self.raw_image_portion, k)
 
         snake = TSnake(
             nodes, force_grid, intensity_grid, a, b, q, gamma, dt
