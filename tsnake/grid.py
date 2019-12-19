@@ -504,8 +504,8 @@ class Grid(object):
         # Nodes that have just been turned on, i.e.
         # new outside boundary of the snake
         for grid_node_queue in grid_node_queues:
-            intersection_nodes = list(grid_node_queue) 
-            on_nodes = []
+            # intersection_nodes = list(grid_node_queue) 
+            # on_nodes = []
             while grid_node_queue:
                 node = grid_node_queue.popleft()
                 if node.is_on:
@@ -515,7 +515,7 @@ class Grid(object):
                                 if not p.is_on:
                                     p.turn_on()
                                     grid_node_queue.append(p)
-                    on_nodes.append(p)
+                    # on_nodes.append(p)
             
 
 
