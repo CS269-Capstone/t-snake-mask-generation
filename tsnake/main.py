@@ -151,7 +151,7 @@ class Main(object):
                 # 2) the reparameterization (occuring every M deformation steps)
                 for snake in snakes:
                     snake.m_step(M)
-                new_snakes = grid.reparameterize_phase_one(snakes)
+                new_snakes, _ = grid.reparameterize_phase_one(snakes)
 
                 # =======================================
                 # CHECK FOR CONVERGENCE =================
@@ -203,6 +203,8 @@ class Main(object):
 
     def compare_inpainted_images(self, ground_truth=None, figsize=(15, 5)):
         # If no ground truth image given, assume ground truth is 'self.color_image'
+        # (Don't do this for object removal; it wouldn't make sense to compare
+        #  L1/L2 diffs to the original image in that case)
         if ground_truth is None:
             ground_truth = self.color_image
         else:
