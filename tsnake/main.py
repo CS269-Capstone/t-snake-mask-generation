@@ -84,7 +84,7 @@ class Main(object):
         """
         assert isinstance(self.grid, Grid), 'Grid should have been initialized, but was not'
 
-        mask = np.zeros(self.grayscale_image.shape)
+        mask = np.zeros(self.grayscale_image.shape, dtype=np.int)
         simplex_grid = Grid(image=self.grayscale_image, scale=1)
         simplex_grid.gen_simplex_grid()
         _ , grid_node_queues = simplex_grid.reparameterize_phase_one(snakes)
@@ -93,10 +93,14 @@ class Main(object):
         grid = simplex_grid.grid
 
         n, m = mask.shape
+        are_on = 0
         for i in range(n):
             for j in range(m):
+                if grid[i, j].is_on:
+                    are_on += 1
                 mask[i, j] = 255 if grid[i, j].is_on else 0
 
+        print("Main found {} nodes to be on".format(are_on))
         return mask
 
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
@@ -198,8 +202,9 @@ class Main(object):
                 all_snakes.append(s)
 
         self.snake_mask = self._snakes_to_mask(all_snakes)
-        self.snake_output_image = self._inpaint('snake')
-        self.user_output_image = self._inpaint('user')
+        return self.snake_mask
+        # self.snake_output_image = self._inpaint('snake')
+        # self.user_output_image = self._inpaint('user')
 
     def compare_inpainted_images(self, ground_truth=None, figsize=(15, 5)):
         # If no ground truth image given, assume ground truth is 'self.color_image'
