@@ -511,23 +511,32 @@ class Grid(object):
         # Nodes that have just been turned on, i.e.
         # new outside boundary of the snake
         for grid_node_queue in grid_node_queues:
+            print("Queue initally of length {}".format(len(grid_node_queue)))
             # intersection_nodes = list(grid_node_queue)
             on_nodes = []
+            processed = set()
+            blocked_edges = 0
             while grid_node_queue:
                 node = grid_node_queue.popleft()
                 x, y = int(node.x), int(node.y)
                 node = self.grid[x, y]
-                if node.is_on:
+                if node.is_on and node not in processed:
+                    processed.add(node)
                     for edge in node.adjacent_edges:
                         edge = self.edges[edge]
                         if len(edge.intersections) == 0:
-                            for p in edge.endpoints:
+                            for i in range(len(edge.endpoints)):
+                                p = edge.endpoints[i]
                                 if not p.is_on:
-                                    p.turn_on()
-                                    grid_node_queue.append(p)
+                                    x, y = int(p.x), int(p.y)
+                                    self.grid[x, y].turn_on()
+                                    grid_node_queue.append(self.grid[x, y])
+                        else:
+                            blocked_edges += 1
                     on_nodes.append(p)
             
             total_nodes = self.grid.shape[0] * self.grid.shape[1]
+            print("total blocked edges = {}".format(blocked_edges))
             print(
                 "# grid nodes turned on = {} / {}".format(len(set(on_nodes)), total_nodes))
             are_on = 0
