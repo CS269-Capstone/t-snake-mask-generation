@@ -4,6 +4,7 @@ Main entry point for the project.
 import warnings
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 
@@ -98,11 +99,8 @@ class Main(object):
             for j in range(m):
                 mask[i, j] = 255 if grid[i, j].is_on else 0
 
-<<<<<<< HEAD
-=======
         total_num_nodes = n * m
         print("Main found [{}/{}] nodes to be on".format(are_on, total_num_nodes))
->>>>>>> d6712ed... Remove now-broken inpainting code ;(
         return mask
 
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
@@ -204,45 +202,31 @@ class Main(object):
                 all_snakes.append(s)
 
         self.snake_mask = self._snakes_to_mask(all_snakes)
-        self.snake_output_image = self._inpaint('snake')
-        self.user_output_image = self._inpaint('user')
+        # self.snake_output_image = self._inpaint('snake')
+        # self.user_output_image = self._inpaint('user')
+        return self.snake_mask
 
-    def compare_inpainted_images(self, ground_truth=None, figsize=(15, 5)):
-        # If no ground truth image given, assume ground truth is 'self.color_image'
-        # (Don't do this for object removal; it wouldn't make sense to compare
-        #  L1/L2 diffs to the original image in that case)
-        if ground_truth is None:
-            ground_truth = self.color_image
-        else:
-            assert ground_truth.shape == self.color_image.shape
-
-        assert self.user_output_image is not None, 'please call Main.run()'
-        assert self.snake_output_image is not None, 'please call Main.run()'
-
-        user_img = self.user_output_image
-        snake_img = self.snake_output_image
-
-        user_l1 = np.sum(np.abs(ground_truth - self.user_output_image))
-        snake_l1 = np.sum(np.abs(ground_truth - self.snake_output_image))
-
-        user_l2 = np.sum((ground_truth - self.user_output_image)**2)
-        snake_l2 = np.sum((ground_truth - self.snake_output_image)**2)
+    def compare_masks(self, figsize=(15, 5)):
+        # number of masked pixels
+        npm_user = np.argwhere(self.user_mask != 0).shape[0]
+        npm_snake = np.argwhere(self.snake_mask != 0).shape[0]
+        
+        pct_reduction = (npm_user - npm_snake) / npm_snake
 
         f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize)
-        ax1.set_title('Ground truth image')
-        ax2.set_title(
-            'Inpainted w/ user-defined mask (L1=%f, L2=%f)' % (user_l1, user_l2)
-        )
-        ax3.set_title(
-            'Inpainted w/ snake-defined mask (L1=%f, L2=%f)' % (snake_l1, snake_l2)
-        )
+        f.suptitle('Percent reduction in masked pixels: %f' % pct_reduction)
+        ax1.set_title('Original image')
+        ax2.set_title('User-defined mask (NPM=%d)' % npm_user)
+        ax3.set_title('Snake-defined mask (NPM=%d)' % npm_snake)
 
         # https://www.pyimagesearch.com/2014/11/03/display-matplotlib-rgb-image/
-        ax1.imshow(cv2.cvtColor(ground_truth, cv2.COLOR_BGR2RGB))
-        ax2.imshow(cv2.cvtColor(self.user_output_image, cv2.COLOR_BGR2RGB))
-        ax3.imshow(cv2.cvtColor(self.snake_output_image, cv2.COLOR_BGR2RGB))
+        ax1.imshow(cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB))
+        ax2.imshow(self.user_mask, cmap=plt.cm.binary)
+        ax3.imshow(self.snake_mask, cmap=plt.cm.binary)
+        
+        plt.show()
 
-        return [(user_l1, user_l2), (snake_l1, snake_l2)]
+        
 
 
 
