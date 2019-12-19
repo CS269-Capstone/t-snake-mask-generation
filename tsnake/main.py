@@ -75,13 +75,15 @@ class Main(object):
     def _snakes_to_mask(self, snakes):
         """
         Take a list of snakes, and return an np array denoting a mask
+        
         Args:
         =======================
-        * snakes: list(TSnake), list of all converged tsnakes for the image
+        * snakes: list(TSnake): list of all converged snakes for the image.
         =======================
-        Return:
+        
+        Returns:
         =======================
-        * mask: np.array containing the mask as 0s and 1s
+        * mask: np.array containing the binary mask M \in {0, 255}^{n \times m}
         =======================
         """
         assert isinstance(self.grid, Grid), 'Grid should have been initialized, but was not'
@@ -196,11 +198,28 @@ class Main(object):
         # ====================================================
         # EXTRACT THE RESULTING IMAGE ========================
         # ====================================================
+        # First, make sure the snake node coordinates are 
+        # consistent with the *full* image 
+        # (as they evolve in the coordinate system of their 
+        # respective MaskedRegions)
+        
         all_snakes = []
-        for snake_list in self.snakes:
-            for s in snake_list:
-                all_snakes.append(s)
-
+        for r_num in range(len(self.masked_regions)):
+            snake_list = self.snakes[r_num]
+            region = self.masked_regions[r_num]
+            
+            top_row = region.top_row
+            left_col = region.left_col
+            
+            for snake in snake_list:
+                for node in snake.nodes:
+                    x, y = node.x, node.y
+                    x += top_row
+                    y += left_col
+                    node.update(x, y)
+                    
+                all_snakes.append(snake)
+        
         self.snake_mask = self._snakes_to_mask(all_snakes)
         # self.snake_output_image = self._inpaint('snake')
         # self.user_output_image = self._inpaint('user')
