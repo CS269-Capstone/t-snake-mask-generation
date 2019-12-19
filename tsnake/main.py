@@ -10,7 +10,7 @@ import numpy.linalg as la
 import tsnake.initialize as init
 import tsnake.utils as utils
 from tsnake.grid import Grid
-from jiahui.inpaint import inpaint as j_inpaint
+# from jiahui.inpaint import inpaint as j_inpaint
 
 
 class Main(object):
@@ -60,13 +60,14 @@ class Main(object):
         if which_mask == 'snake' and self.snake_mask is None:
             msg = 'T-snake has not been run yet - please call Main.run() first.'
             raise ValueError(msg)
-
-        if which_mask == 'user':
-            output = j_inpaint(self.color_image, self.user_mask)
-            self.user_output_image = output
-        else:
-            output = j_inpaint(self.color_image, self.snake_mask)
-            self.snake_output_image = output
+        
+        # inpainting no longer works :( 
+#         if which_mask == 'user':
+#             output = j_inpaint(self.color_image, self.user_mask)
+#             self.user_output_image = output
+#         else:
+#             output = j_inpaint(self.color_image, self.snake_mask)
+#             self.snake_output_image = output
 
         return output
 
@@ -97,6 +98,11 @@ class Main(object):
             for j in range(m):
                 mask[i, j] = 255 if grid[i, j].is_on else 0
 
+<<<<<<< HEAD
+=======
+        total_num_nodes = n * m
+        print("Main found [{}/{}] nodes to be on".format(are_on, total_num_nodes))
+>>>>>>> d6712ed... Remove now-broken inpainting code ;(
         return mask
 
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
