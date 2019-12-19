@@ -98,8 +98,19 @@ class Main(object):
         assert isinstance(self.grid, Grid), 'Grid should have been initialized, but was not'
 
         mask = np.zeros(self.grayscale_image.shape)
-        #TODO: Reuse code from re-parameterization
-        raise NotImplementedError
+        simplex_grid = Grid(image=self.grayscale_image, scale=1)
+        simplex_grid.gen_simplex_grid()
+        _ , grid_node_queues = simplex_grid.reparameterize_phase_one(snakes)
+        simplex_grid.reparameterize_phase_two(
+            snakes=snakes, grid_node_queues=grid_node_queues)
+        grid = simplex_grid.grid
+
+        n, m = mask.shape
+        for i in range(n):
+            for j in range(m):
+                mask[i, j] = 255 if grid[i, j].is_on else 0
+
+        return mask
 
     def run(self, max_iter=1000, grid_scale=1.0, tolerance=0.5, **snake_params):
         """
@@ -151,7 +162,7 @@ class Main(object):
                 # 2) the reparameterization (occuring every M deformation steps)
                 for snake in snakes:
                     snake.m_step(M)
-                new_snakes = grid.reparameterize_phase_one(snakes)
+                new_snakes, _ = grid.reparameterize_phase_one(snakes)
 
                 # =======================================
                 # CHECK FOR CONVERGENCE =================
