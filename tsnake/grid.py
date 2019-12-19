@@ -168,6 +168,8 @@ class Grid(object):
         self.point_edge_map = dict()
         self.edges = dict()  # set of all edges
         # print('Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}'.format(self.m, self.n, self.d))
+        
+        self.gen_simplex_grid()
 
     def _store_edge(self, p1: Point, p2: Point) -> None:
         """
@@ -215,6 +217,8 @@ class Grid(object):
                     if j < n_steps - 1:
                         p2 = self.grid[i-1, j+1]
                         self._store_edge(curr_pt, p2)  # diagnoal edge
+                        
+        return self.grid
 
     def get_image_force(self, sigma, c, p):
         """

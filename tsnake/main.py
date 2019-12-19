@@ -7,10 +7,10 @@ import cv2
 import numpy as np
 import numpy.linalg as la
 
-import jiahui
 import tsnake.initialize as init
 import tsnake.utils as utils
 from tsnake.grid import Grid
+from jiahui.inpaint import inpaint as j_inpaint
 
 
 class Main(object):
@@ -62,10 +62,10 @@ class Main(object):
             raise ValueError(msg)
 
         if which_mask == 'user':
-            output = jiahui.inpaint.inpaint(self.color_image, self.user_mask)
+            output = j_inpaint(self.color_image, self.user_mask)
             self.user_output_image = output
         else:
-            output = jiahui.inpaint.inpaint(self.color_image, self.snake_mask)
+            output = j_inpaint(self.color_image, self.snake_mask)
             self.snake_output_image = output
 
         return output
@@ -140,6 +140,8 @@ class Main(object):
         to_finish = set(list(range(len(self.masked_regions))))
         iter_num = 0
         while len(to_finish) > 0 and iter_num < max_iter:
+            to_discard = set()
+            
             for r_num in to_finish:
                 grid = self.grid
                 snakes = self.snakes[r_num]
@@ -173,13 +175,15 @@ class Main(object):
                 # has moved by no more than `tolerance`
                 for s in range(len(snakes)):
                     # check if any nodes have moved by more than `tolerance`
-                    if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance]):
+                    if any([utils.dist(snakes[s].nodes[i].position, new_snakes[s].nodes[i].position) > tolerance for i in range(len(snakes[s].nodes))]):
                         converged = False
                         break
 
                 self.snakes[r_num] = new_snakes
                 if converged:
-                    to_finish.discard(r_num)
+                    to_discard.add(r_num)
+                    
+            to_finish = to_finish.difference(to_discard)
             iter_num += 1
 
         if len(to_finish) > 0:
