@@ -13,19 +13,6 @@ import tsnake.utils as utils
 from tsnake.grid import Grid
 
 
-# class SubImage(object):
-#     """
-#     This class represents a 'sub-image', which corresponds to one of the
-#     `MaskedRegion` objects constructed in initialize.py.
-
-#     For this sub-image / sub-region of the full image, this class owns
-#     the Grid and T-snake instances.
-#     """
-
-#     def __init__(self, masked_region):
-#         self.masked_region = masked_region
-
-
 class Main(object):
     """
     Class acting as the main entry point for the project.
@@ -209,8 +196,6 @@ class Main(object):
         self.snake_mask = self._snakes_to_mask(all_snakes)
         self.snake_output_image = self._inpaint('snake')
         self.user_output_image = self._inpaint('user')
-        raise NotImplementedError    # TODO
-
 
     def compare_inpainted_images(self, ground_truth=None, figsize=(15, 5)):
         # If no ground truth image given, assume ground truth is 'self.color_image'
@@ -250,5 +235,29 @@ class Main(object):
         return [(user_l1, user_l2), (snake_l1, snake_l2)]
 
 
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 if __name__ == '__main__':
     pass
+
+
+
+
+
+
+
+
+
+
+

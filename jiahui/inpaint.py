@@ -19,6 +19,10 @@ def inpaint(
     """
     Takes the image+mask and returns the inpainted image.
     """
+    assert image.shape[:2] == mask.shape[:2]
+    # GAN expects the mask to be 3D
+    if len(mask.shape) == 2:
+        mask = np.tile(mask[:, :, np.newaxis], reps=(1, 1, 3))
     assert image.shape == mask.shape
     
     checkpoint_dir = os.path.abspath(checkpoint_dir)
