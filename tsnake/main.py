@@ -2,6 +2,7 @@
 Main entry point for the project.
 """
 import warnings
+from copy import deepcopy
 
 import cv2
 import matplotlib.pyplot as plt
@@ -205,10 +206,25 @@ class Main(object):
         # consistent with the *full* image 
         # (as they evolve in the coordinate system of their 
         # respective MaskedRegions)
-        
+        all_snakes = self.process_snakes_for_mask_generation()
+        self.snake_mask = self._snakes_to_mask(all_snakes)
+        # self.snake_output_image = self._inpaint('snake')
+        # self.user_output_image = self._inpaint('user')
+        return self.snake_mask
+    
+    def process_snakes_for_mask_generation(self):
+        """
+        For each snake in self.snakes, goes through and returns a copy
+        of each with its coordinate system changed to be consistent 
+        with the entire image.
+        (Each snake evolves in a coordinate system defined by its 
+         respective MaskedRegion)
+         
+        Returns the snakes in a flattened list.
+        """
         all_snakes = []
         for r_num in range(len(self.masked_regions)):
-            snake_list = self.snakes[r_num]
+            snake_list = deepcopy(self.snakes[r_num])
             region = self.masked_regions[r_num]
             
             top_row = region.top_row
@@ -222,18 +238,18 @@ class Main(object):
                     node.update(x, y)
                     
                 all_snakes.append(snake)
-        
-        self.snake_mask = self._snakes_to_mask(all_snakes)
-        # self.snake_output_image = self._inpaint('snake')
-        # self.user_output_image = self._inpaint('user')
-        return self.snake_mask
-
-    def compare_masks(self, figsize=(15, 5)):
+                
+        return all_snakes
+    
+    def compare_masks(self, figsize=(15, 5), show_snakes=True):
+        # ==========================================================
+        # Compute the number of masked pixels per mask
         # number of masked pixels
         npm_user = np.argwhere(self.user_mask != 0).shape[0]
         npm_snake = np.argwhere(self.snake_mask != 0).shape[0]
         
-        pct_reduction = (npm_user - npm_snake) / npm_snake
+        pct_reduction = (npm_user - npm_snake) / npm_user
+        # ==========================================================
 
         f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize)
         f.suptitle('Percent reduction in masked pixels: %f' % pct_reduction)
@@ -245,6 +261,16 @@ class Main(object):
         ax1.imshow(cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB))
         ax2.imshow(self.user_mask, cmap=plt.cm.binary)
         ax3.imshow(self.snake_mask, cmap=plt.cm.binary)
+        
+        if show_snakes:
+            all_snakes = self.process_snakes_for_mask_generation()
+            for snake in all_snakes:
+                node_locs = snake.node_locations
+                
+                ax1.plot(
+                    node_locs[:, 1], node_locs[:, 0], color='red', marker='x'
+                )
+                
         
         plt.show()
 
