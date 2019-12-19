@@ -151,16 +151,16 @@ class Grid(object):
         self.image_force = None
         self.image_inflation_force = None
 
-        # Simplex Grid Vars
-        if scale >= 1:
-            s = 'Scale > 1 must be an integer multiple of image size.'
-            assert self.m % scale == 0, s
-            assert self.n % scale == 0, s
-        elif scale > 0:
-            inv = 1/float(scale)
-            assert inv.is_integer(), 'If scale < 1, 1/scale must be an integer'
-        else:
-            assert False, 'Scale must be > 0.'
+        # # Simplex Grid Vars
+        # if scale >= 1:
+        #     s = 'Scale > 1 must be an integer multiple of image size.'
+        #     assert self.m % scale == 0, s
+        #     assert self.n % scale == 0, s
+        # elif scale > 0:
+        #     inv = 1/float(scale)
+        #     assert inv.is_integer(), 'If scale < 1, 1/scale must be an integer'
+        # else:
+        #     assert False, 'Scale must be > 0.'
         self.scale = scale
         self.grid = None
 
