@@ -22,7 +22,7 @@ class Point(uPoint):
     def __init__(self, x, y):
         super().__init__(x, y)
         self.adjacent_edges = dict()
-        self._is_on = False # Initialize to on because our snake shrinks 
+        self._is_on = False  # Initialize to on because our snake shrinks
         self.sign = None
 
     @property
@@ -84,27 +84,27 @@ class GridCellEdge(uEdge):
         # Get the direction from the intersect to the vertex
         plus_norm = point.position.reshape(-1) + element.normal
         minus_norm = point.position.reshape(-1) - element.normal
-        
+
         plus_dist = dist(plus_norm, max_vertex.position.reshape(-1))
         minus_dist = dist(minus_norm, max_vertex.position.reshape(-1))
-        
-        is_outside = plus_dist < minus_dist
+
+        is_outside = plus_dist > minus_dist
         if is_outside:
             point.sign = 1  # or -1? depending on the normal?
         else:
             point.sign = -1
-        
+
         if not self.intersections:
             self.intersections.append(point)
         elif self.intersections[-1].sign == point.sign:
             self.intersections[-1] = point
         else:
             self.intersections = []
-        
+
         return_val = None
         if is_outside:
             return_val = max_vertex
-            max_vertex.turn_on()
+            # max_vertex.turn_on()
 
         return return_val
 
@@ -168,7 +168,7 @@ class Grid(object):
         self.point_edge_map = dict()
         self.edges = dict()  # set of all edges
         # print('Grid initialized with:\n\theight: {}\n\twidth: {}\n\tdepth: {}'.format(self.m, self.n, self.d))
-        
+
         self.gen_simplex_grid()
 
     def _store_edge(self, p1: Point, p2: Point) -> None:
@@ -217,7 +217,7 @@ class Grid(object):
                     if j < n_steps - 1:
                         p2 = self.grid[i-1, j+1]
                         self._store_edge(curr_pt, p2)  # diagnoal edge
-                        
+
         return self.grid
 
     def get_image_force(self, sigma, c, p):
@@ -367,13 +367,15 @@ class Grid(object):
             edges_to_check = list(self.get_cell_edges(index))
             while edges_to_check:
                 edge = edges_to_check.pop()
-
+                edge = self.edges[edge]
                 intersect_pt = self._get_element_intersection(element, edge)
                 if intersect_pt is not None and intersect_pt not in intersect_set:
                     # intersections.append(intersect_pt)
                     grid_node = edge.add_intersection(intersect_pt, element)
                     if grid_node is not None:
-                        grid_node_queue.append(grid_node)
+                        x, y = int(grid_node.x), int(grid_node.y)
+                        self.grid[x, y].turn_on()
+                        grid_node_queue.append(self.grid[x, y])
                     intersect_set[intersect_pt] = edge
                     checked_edges.add(edge)
 
@@ -393,8 +395,10 @@ class Grid(object):
                     # ))
 
         for edge in checked_edges:
+            edge = self.edges[edge]
             for point in edge.intersections:
-                intersections.append(point)
+                x, y = int(point.x), int(point.y)
+                intersections.append(self.grid[x, y])
         return (intersections, grid_node_queue)
 
     def _sort_nodes(self, nodes):
@@ -450,7 +454,7 @@ class Grid(object):
         Takes a list of T-Snakes and returns a new list of T-Snakes (which have possibly been split/merged/etc).
         If no snakes are split/merged, then the snakes are presented in the same order as before, AND
         each snake's nodes are presented in the same order.
-        
+
          Arguments:
         ===================================
         * snakes: List of TSnakes to be reparametrized
@@ -486,14 +490,13 @@ class Grid(object):
 
         return (new_snakes, grid_node_queues)
 
-
     def reparameterize_phase_two(self, snakes: [TSnake], grid_node_queues: [deque([Point])]) -> [TSnake]:
         '''
         Takes a list of ACID grid verticies found in reparameterize_phase_one()
         and performs reparametrize phase two. It then returns a new list of T-Snakes (which have 
         possibly been split/merged/etc). If no snakes are split/merged, then the snakes are 
         presented in the same order as before, AND each snake's nodes are presented in the same order.
-        
+
          Arguments:
         ===================================
         * grid_node_queues: list(deque([Point])) to be dequeued and processed, 1 for each
@@ -508,21 +511,33 @@ class Grid(object):
         # Nodes that have just been turned on, i.e.
         # new outside boundary of the snake
         for grid_node_queue in grid_node_queues:
-            # intersection_nodes = list(grid_node_queue) 
-            # on_nodes = []
+            # intersection_nodes = list(grid_node_queue)
+            on_nodes = []
             while grid_node_queue:
                 node = grid_node_queue.popleft()
+                x, y = int(node.x), int(node.y)
+                node = self.grid[x, y]
                 if node.is_on:
                     for edge in node.adjacent_edges:
+                        edge = self.edges[edge]
                         if len(edge.intersections) == 0:
                             for p in edge.endpoints:
                                 if not p.is_on:
                                     p.turn_on()
                                     grid_node_queue.append(p)
-                    # on_nodes.append(p)
+                    on_nodes.append(p)
             
-
-
+            total_nodes = self.grid.shape[0] * self.grid.shape[1]
+            print(
+                "# grid nodes turned on = {} / {}".format(len(set(on_nodes)), total_nodes))
+            are_on = 0
+            m, n = self.grid.shape
+            for i in range(n):
+                for j in range(m):
+                    if self.grid[i, j].is_on:
+                        are_on += 1
+            print(
+                "# grid nodes turned on in iteration = {} / {}".format(are_on, total_nodes))
 
 
 if __name__ == '__main__':
