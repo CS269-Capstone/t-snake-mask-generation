@@ -10,6 +10,11 @@ pip install -e .
 ```
 where ```-e``` means install in editable (dev) mode.
 
+## Usage
+Running this project requires an installation of Jupyter Notebook. Installation instructions are available [here](https://jupyter.org/install).
+
+Open a Jupyter Notebook in this directory, and then navigate to ```notebooks```, and open ```Snake-Evolution-Tests```. Run all cells to observe program output.
+
 
 ## How to submit code:
 This information is referenced from the Editing in a temporary branch header [here](https://drive.google.com/open?id=19pY7Lvf4Qnqd8n2r_5DisdZURmBsU94rxcJ4A-VnEp8).
