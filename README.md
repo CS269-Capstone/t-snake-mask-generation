@@ -3,17 +3,27 @@
 # Capstone-Integration
 This repository will contain the functional t-snake implementation augmented with the inpainting GAN.
 
+### Requirements
+- Python 3, available for download [here](https://www.python.org/downloads/)
+- (Optional, but reccomended) Jupyter (and Jupyter Notebook), available for download [here](https://jupyter.org/install).
+  
 ## Installation
-Go to the folder containing all the code and type:
+In the current (main) directory, type the following (pip is the path to the pip module for the python3 interpreter):
 ```
 pip install -e .
 ```
 where ```-e``` means install in editable (dev) mode.
 
 ## Usage
-Running this project requires an installation of Jupyter Notebook. Installation instructions are available [here](https://jupyter.org/install).
-
 Open a Jupyter Notebook in this directory, and then navigate to ```notebooks```, and open ```Snake-Evolution-Tests```. Run all cells to observe program output.
+
+### Alternate Usage Option
+Without a jupyter installation, the notebook can be run in python file form as follows, (with the ```python``` keyword being the path to the python 3 interpreter):
+```
+cd notebooks
+python Snake-Evolution-Tests.py
+```
+Note: Image windows opened by the python script need to be closed for subsequent images to be shown.
 
 
 ## How to submit code:
