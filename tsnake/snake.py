@@ -331,27 +331,29 @@ class TSnake(object):
         # Pre-process sort to get right-handed spiral for normal init
         # This is necessary to get normal vectors to initialize properly
         # nodes.sort(key=lambda x: (x[0] + x[1], x[0], x[1]), reverse=True)
-        nodes = self.nodes
+        nodes = []
+        for element in self.elements:
+            nodes.append(element.nodes[0].position.reshape(-1))
         num_nodes = len(nodes)
         node_locs = np.array(nodes).reshape(num_nodes, 2)
 
-        # Pull out arbitrary starting node
-        loc = node_locs[0]
-        node_locs = node_locs[1:]
+        # # Pull out arbitrary starting node
+        # loc = node_locs[0]
+        # node_locs = node_locs[1:]
 
-        ordered_nodes = [loc]
-        while len(ordered_nodes) < num_nodes:
-            # Find the node which is closest to the last node we processed
-            last = ordered_nodes[-1].reshape(1, 2)
-            # dists = distance from each remaining node to current node
-            dists = cdist(last, node_locs).reshape(-1, )
+        # ordered_nodes = [loc]
+        # while len(ordered_nodes) < num_nodes:
+        #     # Find the node which is closest to the last node we processed
+        #     last = ordered_nodes[-1].reshape(1, 2)
+        #     # dists = distance from each remaining node to current node
+        #     dists = cdist(last, node_locs).reshape(-1, )
 
-            closest = dists.argmin()
-            ordered_nodes.append(node_locs[closest])
-            node_locs = np.delete(node_locs, obj=closest, axis=0)
+        #     closest = dists.argmin()
+        #     ordered_nodes.append(node_locs[closest])
+        #     node_locs = np.delete(node_locs, obj=closest, axis=0)
 
         # Source: https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
-        temp = np.array(ordered_nodes).reshape(-1, 2)
+        temp = np.array(node_locs).reshape(-1, 2)
         x = temp[:, 0].reshape(-1)
         y = temp[:, 1].reshape(-1)
         xs, ys = np.zeros(x.shape), np.zeros(y.shape)
